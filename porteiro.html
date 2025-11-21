@@ -2,39 +2,38 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>EXCLUSIVE PASS – Porteiro</title>
+<title>GOLDENPASS – Porteiro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  body {margin:0; padding:0; background:#0f0c29; color:#fff; font-family:Segoe UI,sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden;}
-  .top {background:#16213e; padding:15px; text-align:center; flex-shrink:0;}
-  h1 {margin:0; font-size:32px; color:#ffffff;}
-  .contador {font-size:48px; font-weight:bold; color:#00d4aa;}
-  .info {padding:10px; text-align:center; background:#1a1a2e;}
-  #video {width:100%; flex-grow:1; background:#000; object-fit:cover;}
-  .lista {flex-shrink:0; max-height:280px; overflow-y:auto; padding:15px; background:#16213e;}
-  .lista div {background:#1e1e2e; padding:12px 16px; margin:6px 0; border-radius:12px; font-size:18px;}
-  #resultado {position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.95); padding:40px 50px; border-radius:25px; text-align:center; z-index:99; display:none; box-shadow:0 0 60px #000; width:90%; max-width:400px;}
-  .ok {color:#2ecc71; font-size:50px; font-weight:bold;}
-  .erro {color:#e74c3c; font-size:50px; font-weight:bold;}
-  #nome {font-size:46px; color:#ffd700; margin:15px 0;}
-  #cat {background:#1a1a2e; padding:15px 50px; border-radius:50px; display:inline-block; font-size:36px;}
-  button {margin-top:25px; padding:15px 50px; font-size:28px; background:#00d4aa; border:none; border-radius:15px; color:#000;}
-  .impBtn {background:#9b59b6; padding:10px 20px; font-size:16px; margin-top:8px;}
+  body{margin:0;padding:0;background:#0f0c29;color:#fff;font-family:Segoe UI,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  .top{background:#16213e;padding:15px;text-align:center;flex-shrink:0}
+  h1{margin:0;font-size:32px;color:#ffd700}
+  .contador{font-size:48px;color:#00d4aa;font-weight:bold}
+  #video{width:100%;flex:1;background:#000;object-fit:cover}
+  .lista{flex-shrink:0;max-height:280px;overflow-y:auto;padding:15px;background:#16213e}
+  .lista div{background:#1e1e2e;padding:12px 16px;margin:6px 0;border-radius:12px;font-size:18px}
+  #resultado{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);padding:40px 50px;border-radius:25px;text-align:center;z-index:99;display:none;box-shadow:0 0 60px #000;width:90%;max-width:400px}
+  .ok{color:#2ecc71;font-size:50px;font-weight:bold}
+  .erro{color:#e74c3c;font-size:50px;font-weight:bold}
+  #nome{font-size:46px;color:#ffd700;margin:15px 0}
+  #cat{background:#1a1a2e;padding:15px 50px;border-radius:50px;display:inline-block;font-size:36px}
+  button{margin-top:25px;padding:15px 50px;font-size:28px;background:#00d4aa;border:none;border-radius:15px;color:#000;cursor:pointer}
+  .impBtn{background:#9b59b6;padding:10px 20px;font-size:16px;margin-top:8px;border:none;border-radius:8px}
 </style>
 </head>
 <body>
 
 <div class="top">
-  <h1>EXCLUSIVE PASS - PORTARIA</h1>
+  <h1>GOLDENPASS</h1>
   <div class="contador"><span id="contador">0</span> / <span id="total">0</span></div>
-  <button class="impBtn" onclick="document.getElementById('imp').click()">IMPORTAR LISTA</button>
-  <input type="file" id="imp" style="display:none" onchange="importar(event)">
+  <button class="impBtn" onclick="importarClique()">IMPORTAR LISTA</button>
+  <input type="file" id="imp" style="display:none" accept=".json" onchange="importar(event)">
 </div>
 
-<video id="video" autoplay playsinline></video>
+<video id="video" autoplay playsinline muted></video>
 
 <div class="lista" id="lista">
-  <div style="text-align:center; color:#666;">Ninguém entrou ainda…</div>
+  <div style="text-align:center;color:#666">Importe a lista para começar</div>
 </div>
 
 <div id="resultado">
@@ -47,10 +46,19 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 let lista = [];
+let escaneando = false;
+const video = document.getElementById("video");
+
+// === IMPORTAR LISTA SEM CONGELAR A CÂMERA ===
+function importarClique(){
+  // Pausa o escaneamento só durante a escolha do arquivo
+  escaneando = false;
+  document.getElementById("imp").click();
+}
 
 function importar(e){
   const file = e.target.files[0];
-  if(!file) return;
+  if(!file) { escaneando = true; tick(); return; }
   const r = new FileReader();
   r.onload = ev => {
     try{
@@ -58,39 +66,54 @@ function importar(e){
       document.getElementById("total").textContent = lista.length;
       document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
       atualizarLista();
-      alert("Lista carregada! Pode começar.");
+      alert("Lista carregada! Pode escanear.");
     }catch{ alert("Arquivo inválido"); }
+    // Volta a escanear depois de carregar
+    escaneando = true;
+    tick();
   };
   r.readAsText(file);
 }
 
-// câmera
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-  .then(s=>{ document.getElementById("video").srcObject=s; tick(); })
-  .catch(()=>{alert("Permita a câmera")});
+// === CÂMERA ===
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false})
+  .then(stream => {
+    video.srcObject = stream;
+    video.play();
+    escaneando = true;
+    tick();
+  })
+  .catch(err => {
+    alert("Permita a câmera para usar o porteiro");
+  });
 
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d", {willReadFrequently:true});
 
 function tick(){
-  const v = document.getElementById("video");
-  if(v.readyState===v.HAVE_ENOUGH_DATA){
-    v.videoWidth>0;{
-    canvas.width = v.videoWidth;
-    canvas.height = v.videoHeight;
-    ctx.drawImage(v,0,0,canvas.width,canvas.height);
-    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
-    const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:"dontInvert"});
-    if(code){
-      validar(code.data);
-      setTimeout(tick,3000);
-      return;
-    }
+  if(!escaneando || video.readyState !== video.HAVE_ENOUGH_DATA){
+    requestAnimationFrame(tick);
+    return;
   }
-}  
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:"dontInvert"});
+
+  if(code){
+    validar(code.data);
+    setTimeout(() => { escaneando = true; tick(); }, 3000);
+    escaneando = false;
+    requestAnimationFrame(tick);
+    return;
+  }
+
   requestAnimationFrame(tick);
 }
 
+// === VALIDAÇÃO ===
 function validar(id){
   const p = lista.find(x=>x.id===id);
   if(!p){ tocarErro(); mostrar("INVÁLIDO","erro"); return; }
@@ -113,10 +136,10 @@ function fechar(){ document.getElementById("resultado").style.display="none"; }
 
 function atualizarLista(){
   const l = document.getElementById("lista");
-  const entrou = lista.filter(p=>p.usado);
+  const entrou = lista.filter(p=>p.usado).reverse(); // mais novos no topo
   l.innerHTML = "";
   if(entrou.length===0){
-    l.innerHTML = '<div style="text-align:center;color:#666">Ninguém entrou ainda…</div>';
+    l.innerHTML = '<div style="text-align:center;color:#666">Ninguém entrou ainda</div>';
     return;
   }
   entrou.forEach(p => {
@@ -126,6 +149,7 @@ function atualizarLista(){
   });
 }
 
+// === SONS ===
 function tocarOk(){
   const ctx = new AudioContext();
   const o = ctx.createOscillator();
