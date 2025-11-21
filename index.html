@@ -13,6 +13,8 @@
   button.excluir{background:#e74c3c;color:#fff;padding:8px 16px;margin-left:10px;font-size:14px}
   button.exp{background:#e67e22}
   button.imp{background:#9b59b6}
+  button.limpar{background:#c0392b;color:#fff;font-weight:bold;font-size:18px}
+  button.limpar:hover{background:#e74c3c}
   #lista div{background:#1a1a5e;padding:16px;margin:10px 0;border-radius:12px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
   h1{text-align:center;color:#ffffff;font-size:46px;margin:10px 0}
 </style>
@@ -20,16 +22,21 @@
 <body>
 <div class="box">
   <h1>EXCLUSIVE PASS</h1>
+  
   <input type="text" id="nome" placeholder="Nome completo">
   <input type="text" id="acomp" placeholder="Acompanhantes (opcional)">
   <select id="cat">
     <option>VIP</option><option>PISTA</option><option>CAMAROTE</option><option>MESA</option><option>OPEN BAR</option>
   </select>
+  
   <button onclick="add()">Adicionar à lista</button>
   <button class="gerar" onclick="todos()">GERAR TODOS OS PDF</button>
-  <button class="exp" onclick="exportar()">EXPORTAR LISTA (arquivo JSON)</button>
+  <button class="exp" onclick="exportar()">EXPORTAR LISTA (JSON)</button>
   <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA</button>
   <input type="file" id="file" style="display:none" onchange="importar(event)">
+  
+  <!-- BOTÃO NOVO PARA APAGAR TUDO -->
+  <button class="limpar" onclick="limparTudo()">LIMPAR TODA A LISTA</button>
 
   <h2 style="color:#00d4aa">Convidados (<span id="total">0</span>)</h2>
   <div id="lista"></div>
@@ -51,7 +58,8 @@ function add(){
   let id = Date.now().toString(36)+Math.random().toString(36).substr(2);
   lista.push({id,nome:n,acomp:a,categoria:c,usado:false});
   salvar();
-  document.getElementById("nome").value=""; document.getElementById("acomp").value="";
+  document.getElementById("nome").value=""; 
+  document.getElementById("acomp").value="";
   atualiza();
 }
 
@@ -67,23 +75,38 @@ function salvar(){
   localStorage.setItem("n",JSON.stringify(lista));
 }
 
+// === BOTÃO NOVO: LIMPAR TUDO ===
+function limparTudo(){
+  if(lista.length === 0){
+    alert("A lista já está vazia!");
+    return;
+  }
+  if(confirm("Tem certeza que quer APAGAR TODOS os convidados?")){
+    if(confirm("Sério mesmo? Essa ação NÃO pode ser desfeita!")){
+      lista = [];
+      salvar();
+      atualiza();
+      alert("Lista zerada com sucesso!");
+    }
+  }
+}
+
 function atualiza(){
-  let l=document.getElementById("lista"); l.innerHTML="";
+  let l=document.getElementById("lista"); 
+  l.innerHTML="";
   lista.forEach((x,i)=>{
     l.innerHTML += `<div><span><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</span>
                     <button class="excluir" onclick="excluir(${i})">Excluir</button></div>`;
   });
-  document.getElementById("total").textContent=lista.length;
+  document.getElementById("total").textContent = lista.length;
 }
 
-// EXPORTAR E IMPORTAR
 function exportar(){
   const data = "data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(lista));
   const a = document.createElement("a");
   a.href = data;
   a.download = "lista_convidados.json";
   a.click();
-  alert("Lista exportada! Envie esse arquivo para o celular do porteiro.");
 }
 
 function importar(e){
@@ -101,7 +124,7 @@ function importar(e){
   reader.readAsText(file);
 }
 
-// GERA PDF (igual à sua última foto, 100% legível)
+// GERA PDF (mantido exatamente como estava, com QR preto e fundo branco)
 async function geraPDF(p){
   const convite = document.createElement("div");
   convite.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:45px;position:absolute;left:-9999px;top:0;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,0,0,0.9);";
@@ -131,16 +154,14 @@ async function geraPDF(p){
   new QRCode(inner.querySelector("#qr"), {
     text: p.id,
     width: 360, height: 360,
-    colorDark: "#000000", colorLight: "#ffffff",
+    colorDark: "#000000", 
+    colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
 
   await new Promise(r=>setTimeout(r,1800));
 
-  const canvas = await html2canvas(convite, {
-    scale:3, width:560, height:1000, backgroundColor:null, willReadFrequently:true
-  });
-
+  const canvas = await html2canvas(convite, {scale:3, width:560, height:1000, backgroundColor:null, willReadFrequently:true});
   const img = canvas.toDataURL("image/png");
   const {jsPDF} = window.jspdf;
   const pdf = new jsPDF("p","mm","a4");
