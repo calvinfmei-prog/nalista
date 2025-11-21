@@ -9,7 +9,7 @@
   .top {background:#16213e;padding:15px;text-align:center;position:relative;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:10px;}
   h1{margin:0;font-size:32px;color:#ffffff}
   .contador{font-size:48px;color:#00d4aa;font-weight:bold}
-  .impBtn{background:#9b59b6;padding:10px 20px;font-size:16px;border:none;border-radius:8px}
+  .impBtn{background:#00d4aa;padding:10px 20px;font-size:16px;border:none;border-radius:8px}
   .toggleCam{
     background: #9b59b6;
     color: #000;
@@ -19,7 +19,7 @@
     border: none;
     cursor: pointer;
     align-items:center;
-    margin-left: 10px; /* distância entre os botões */
+    margin-left: 0px; /* distância entre os botões */
 }
   #video{width:100%;background:#000;object-fit:cover;transition:flex 0.4s}
   .videoContainer{flex:1;overflow:hidden;position:relative;transition:flex 0.4s}
@@ -38,9 +38,12 @@
 <div class="top">
   <h1>EXCLUSIVE PASS - PORTARIA</h1>
   <div class="contador"><span id="contador">0</span> / <span id="total">0</span></div>
-  <button class="impBtn" onclick="importarClique()">IMPORTAR LISTA</button>
-  <input type="file" id="imp" style="display:none" accept=".json" onchange="importar(event)">
-  <button class="toggleCam" id="toggleBtn" onclick="toggleCamera()">Ocultar Câmera</button>
+  <div class="btnRow">
+    <button class="impBtn" onclick="importarClique()">IMPORTAR LISTA</button>
+    <button class="toggleCam" id="toggleBtn" onclick="toggleCamera()">Ocultar Câmera</button>
+</div>
+<input type="file" id="imp" style="display:none" accept=".json" onchange="importar(event)">
+
 </div>
 
 <div class="videoContainer" id="videoContainer">
@@ -189,5 +192,6 @@ function tocarErro(){
 </script>
 </body>
 </html>
+
 
 
