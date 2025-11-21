@@ -1,66 +1,148 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NaLista - Porteiro</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode-reader@1.0.4/dist/qrcode-reader.min.js"></script>
-  <style>
-    body { font-family: Arial; background: #000; color: #0f0; text-align: center; padding: 20px; }
-    #video { width: 100%; max-width: 500px; border: 5px solid #0f0; border-radius: 15px; }
-    .ok { color: #0f0; font-size: 50px; }
-    .erro { color: #f00; font-size: 50px; }
-  </style>
+<meta charset="UTF-8">
+<title>Porteiro - Validação QR Code</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body{font-family:Arial,sans-serif;background:#0f0c29;color:#fff;margin:0;padding:0;overflow:hidden}
+  .top{background:#16213e;padding:20px;text-align:center}
+  h1{color:#ffd700;font-size:38px;margin:0}
+  #contador{font-size:60px;font-weight:bold;color:#00d4aa;margin:15px 0}
+  #video{width:100%;max-width:600px;height:400px;background:#000;border-radius:20px;margin:20px auto;display:block}
+  #resultado{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);padding:40px 60px;border-radius:30px;text-align:center;font-size:32px;z-index:999;display:none;box-shadow:0 0 50px #000}
+  .ok{color:#2ecc71}
+  .erro{color:#e74c3c}
+  .nome{font-size:48px;margin:20px 0;color:#ffd700}
+  .cat{font-size:40px;background:#1a1a2e;padding:15px 60px;border-radius:50px;display:inline-block;margin:20px 0}
+  #lista{margin:20px;padding:20px;background:#16213e;border-radius:15px;max-height:300px;overflow-y:auto}
+  #lista div{padding:12px;background:#1a1a5e;margin:8px 0;border-radius:10px}
+</style>
 </head>
 <body>
-  <h1>🎟️ PORTARIA</h1>
-  <video id="video" autoplay playsinline></video>
-  <div id="resultado" style="margin-top:20px;font-size:24px"></div>
 
-  <script>
-    let convidados = JSON.parse(localStorage.getItem('convidados') || '[]');
+<div class="top">
+  <h1>PORTEIRO - FESTA EXCLUSIVA</h1>
+  <div>Presentes: <span id="contador">0</span> / <span id="total">0</span></div>
+</div>
 
-    const video = document.getElementById('video');
-    const resultado = document.getElementById('resultado');
+<video id="video" autoplay playsinline></video>
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => video.srcObject = stream);
+<div id="resultado">
+  <div id="msg"></div>
+  <div class="nome" id="nome"></div>
+  <div class="cat" id="categoria"></div>
+  <button onclick="fechar()" style="margin-top:30px;padding:15px 40px;font-size:24px;background:#00d4aa;border:none;border-radius:15px;cursor:pointer">OK</button>
+</div>
 
-    const qrReader = new QrcodeReader();
+<div style="padding:20px">
+  <h2 style="color:#00d4aa">Já entraram hoje:</h2>
+  <div id="lista"></div>
+</div>
 
-    setInterval(() => {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        qrReader.callback = (err, value) => {
-          if (err) return;
-          if (!value) return;
+<script src="qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
-          const idEscaneado = value.result;
-          const convidado = convidados.find(c => c.id === idEscaneado);
+<script>
+let lista = JSON.parse(localStorage.getItem("n")||"[]");
+let presentes = lista.filter(p => p.usado).length;
+document.getElementById("contador").textContent = presentes;
+document.getElementById("total").textContent = lista.length;
+atualizaLista();
 
-          if (!convidado) {
-            resultado.innerHTML = `<div class="erro">ACESSO NEGADO<br>Convite inválido</div>`;
-            return;
-          }
+const video = document.getElementById("video");
+const resultado = document.getElementById("resultado");
 
-          if (convidado.usado) {
-            resultado.innerHTML = `<div class="erro">JÁ ENTROU<br>${convidado.nome}</div>`;
-            return;
-          }
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+  .then(stream => { video.srcObject = stream; video.play(); tick(); })
+  .catch(err => alert("Câmera não permitida ou não encontrada"));
 
-          // Marca como usado
-          convidado.usado = true;
-          localStorage.setItem('convidados', JSON.stringify(convidados));
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
 
-          resultado.innerHTML = `
-            <div class="ok">LIBERADO!<br>
-            ✅ ${convidado.nome.toUpperCase()}<br>
-            ${convidado.categoria}<br>
-            ${convidado.acompanhantes ? '+ ' + convidado.acompanhantes : ''}
-            </div>`;
-        };
-        qrReader.decode(video);
-      }
-    }, 500);
-  </script>
+function tick(){
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
+    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    
+    if(code){
+      validar(code.data);
+      setTimeout(tick, 3000); // evita ler o mesmo QR várias vezes
+      return;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function validar(id){
+  const pessoa = lista.find(p => p.id === id);
+  if(!pessoa){
+    tocarErro();
+    mostrar("QR CODE INVÁLIDO", "", "", "erro");
+    return;
+  }
+  if(pessoa.usado){
+    tocarErro();
+    mostrar("JÁ ENTROU!", pessoa.nome.toUpperCase(), pessoa.categoria, "erro");
+    return;
+  }
+
+  // Marca como usado
+  pessoa.usado = true;
+  localStorage.setItem("n", JSON.stringify(lista));
+  presentes++;
+  document.getElementById("contador").textContent = presentes;
+  atualizaLista();
+
+  tocarOk();
+  mostrar("LIBERADO!", pessoa.nome.toUpperCase(), pessoa.categoria, "ok");
+}
+
+function mostrar(msg, nome, cat, tipo){
+  document.getElementById("msg").textContent = msg;
+  document.getElementById("msg").className = tipo;
+  document.getElementById("nome").textContent = nome;
+  document.getElementById("categoria").textContent = cat;
+  resultado.style.display = "block";
+}
+
+function fechar(){
+  resultado.style.display = "none";
+}
+
+function tocarOk(){
+  const audio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+  audio.play();
+  // Som de entrada (beep positivo)
+  const ctx = new AudioContext();
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(800, ctx.currentTime);
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.2);
+}
+
+function tocarErro(){
+  const ctx = new AudioContext();
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(200, ctx.currentTime);
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.4);
+}
+
+function atualizaLista(){
+  const l = document.getElementById("lista");
+  l.innerHTML = "";
+  lista.filter(p => p.usado).forEach(p => {
+    l.innerHTML += `<div>${p.nome} — ${p.categoria}</div>`;
+  });
+}
+</script>
 </body>
 </html>
