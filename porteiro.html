@@ -6,11 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   body{margin:0;padding:0;background:#0f0c29;color:#fff;font-family:Segoe UI,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-  .top{background:#16213e;padding:15px;text-align:center;flex-shrink:0}
+  .top{background:#16213e;padding:15px;text-align:center;position:relative;flex-shrink:0}
   h1{margin:0;font-size:32px;color:#ffffff}
   .contador{font-size:48px;color:#00d4aa;font-weight:bold}
-  #video{width:100%;flex:1;background:#000;object-fit:cover}
-  .lista{flex-shrink:0;max-height:280px;overflow-y:auto;padding:15px;background:#16213e}
+  .impBtn{background:#9b59b6;padding:10px 20px;font-size:16px;border:none;border-radius:8px}
+  .toggleCam{position:absolute;right:15px;top:50%;transform:translateY(-50%);background:#9b59b6;color:#000;padding:12px 16px;border-radius:8px;font-size:24px;border:none;cursor:pointer;z-index:10}
+  #video{width:100%;background:#000;object-fit:cover;transition:flex 0.4s}
+  .videoContainer{flex:1;overflow:hidden;position:relative;transition:flex 0.4s}
+  .lista{padding:15px;background:#16213e;overflow-y:auto;transition:max-height 0.4s}
   .lista div{background:#1e1e2e;padding:12px 16px;margin:6px 0;border-radius:12px;font-size:18px}
   #resultado{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);padding:40px 50px;border-radius:25px;text-align:center;z-index:99;display:none;box-shadow:0 0 60px #000;width:90%;max-width:400px}
   .ok{color:#2ecc71;font-size:50px;font-weight:bold}
@@ -18,7 +21,6 @@
   #nome{font-size:46px;color:#ffd700;margin:15px 0}
   #cat{background:#1a1a2e;padding:15px 50px;border-radius:50px;display:inline-block;font-size:36px}
   button{margin-top:25px;padding:15px 50px;font-size:28px;background:#00d4aa;border:none;border-radius:15px;color:#000;cursor:pointer}
-  .impBtn{background:#9b59b6;padding:10px 20px;font-size:16px;margin-top:8px;border:none;border-radius:8px}
 </style>
 </head>
 <body>
@@ -28,9 +30,12 @@
   <div class="contador"><span id="contador">0</span> / <span id="total">0</span></div>
   <button class="impBtn" onclick="importarClique()">IMPORTAR LISTA</button>
   <input type="file" id="imp" style="display:none" accept=".json" onchange="importar(event)">
+  <button class="toggleCam" id="toggleBtn" onclick="toggleCamera()">Ocultar Câmera</button>
 </div>
 
-<video id="video" autoplay playsinline muted></video>
+<div class="videoContainer" id="videoContainer">
+  <video id="video" autoplay playsinline muted></video>
+</div>
 
 <div class="lista" id="lista">
   <div style="text-align:center;color:#666">Importe a lista para começar</div>
@@ -47,18 +52,38 @@
 <script>
 let lista = [];
 let escaneando = false;
+let cameraVisivel = true;
 const video = document.getElementById("video");
+const videoContainer = document.getElementById("videoContainer");
+const listaDiv = document.getElementById("lista");
+const toggleBtn = document.getElementById("toggleBtn");
 
-// === IMPORTAR LISTA SEM CONGELAR A CÂMERA ===
+function toggleCamera(){
+  cameraVisivel = !cameraVisivel;
+  if(cameraVisivel){
+    videoContainer.style.flex = "1";
+    listaDiv.style.maxHeight = "280px";
+    toggleBtn.innerHTML = "Ocultar Câmera";
+    escaneando = true;
+    tick();
+  } else {
+    videoContainer.style.flex = "0";
+    videoContainer.style.height = "0";
+    listaDiv.style.maxHeight = "none";
+    listaDiv.style.flex = "1";
+    toggleBtn.innerHTML = "Mostrar Câmera";
+    escaneando = false;
+  }
+}
+
+// IMPORTAR LISTA
 function importarClique(){
-  // Pausa o escaneamento só durante a escolha do arquivo
   escaneando = false;
   document.getElementById("imp").click();
 }
-
 function importar(e){
   const file = e.target.files[0];
-  if(!file) { escaneando = true; tick(); return; }
+  if(!file) { if(cameraVisivel) escaneando = true; tick(); return; }
   const r = new FileReader();
   r.onload = ev => {
     try{
@@ -66,16 +91,13 @@ function importar(e){
       document.getElementById("total").textContent = lista.length;
       document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
       atualizarLista();
-      //alert("Lista carregada! Pode escanear.");
     }catch{ alert("Arquivo inválido"); }
-    // Volta a escanear depois de carregar
-    escaneando = true;
-    tick();
+    if(cameraVisivel){ escaneando = true; tick(); }
   };
   r.readAsText(file);
 }
 
-// === CÂMERA ===
+// CÂMERA
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false})
   .then(stream => {
     video.srcObject = stream;
@@ -83,37 +105,29 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:fal
     escaneando = true;
     tick();
   })
-  .catch(err => {
-    alert("Permita a câmera para usar o porteiro");
-  });
+  .catch(() => alert("Permita a câmera"));
 
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d", {willReadFrequently:true});
 
 function tick(){
-  if(!escaneando || video.readyState !== video.HAVE_ENOUGH_DATA){
+  if(!escaneando || !cameraVisivel || video.readyState !== video.HAVE_ENOUGH_DATA){
     requestAnimationFrame(tick);
     return;
   }
-
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   ctx.drawImage(video,0,0,canvas.width,canvas.height);
-  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
-  const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:"dontInvert"});
-
+  const code = jsQR(ctx.getImageData(0,0,canvas.width,canvas.height).data, canvas.width, canvas.height, {inversionAttempts:"dontInvert"});
   if(code){
     validar(code.data);
-    setTimeout(() => { escaneando = true; tick(); }, 3000);
+    setTimeout(()=>{ if(cameraVisivel) escaneando = true; tick(); }, 3000);
     escaneando = false;
-    requestAnimationFrame(tick);
-    return;
   }
-
   requestAnimationFrame(tick);
 }
 
-// === VALIDAÇÃO ===
+// VALIDAÇÃO E LISTA
 function validar(id){
   const p = lista.find(x=>x.id===id);
   if(!p){ tocarErro(); mostrar("INVÁLIDO","erro"); return; }
@@ -125,18 +139,9 @@ function validar(id){
   atualizarLista();
 }
 
-function mostrar(txt, tipo, pessoa=null){
-  document.getElementById("msg").textContent = txt;
-  document.getElementById("msg").className = tipo;
-  document.getElementById("nome").textContent = pessoa ? pessoa.nome.toUpperCase() : "";
-  document.getElementById("cat").textContent = pessoa ? pessoa.categoria : "";
-  document.getElementById("resultado").style.display = "block";
-}
-function fechar(){ document.getElementById("resultado").style.display="none"; }
-
 function atualizarLista(){
+  const entrou = lista.filter(p=>p.usado).reverse();
   const l = document.getElementById("lista");
-  const entrou = lista.filter(p=>p.usado).reverse(); // mais novos no topo
   l.innerHTML = "";
   if(entrou.length===0){
     l.innerHTML = '<div style="text-align:center;color:#666">Ninguém entrou ainda</div>';
@@ -149,7 +154,16 @@ function atualizarLista(){
   });
 }
 
-// === SONS ===
+function mostrar(txt, tipo, pessoa=null){
+  document.getElementById("msg").textContent = txt;
+  document.getElementById("msg").className = tipo;
+  document.getElementById("nome").textContent = pessoa ? pessoa.nome.toUpperCase() : "";
+  document.getElementById("cat").textContent = pessoa ? pessoa.categoria : "";
+  document.getElementById("resultado").style.display = "block";
+}
+function fechar(){ document.getElementById("resultado").style.display="none"; }
+
+// SONS
 function tocarOk(){
   const ctx = new AudioContext();
   const o = ctx.createOscillator();
@@ -165,5 +179,3 @@ function tocarErro(){
 </script>
 </body>
 </html>
-
-
