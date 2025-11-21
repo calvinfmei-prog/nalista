@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head><title>Sync</title></head>
+<body>
+  <h2>Exportar lista (organizador)</h2>
+  <button onclick="exportar()">📤 Exportar lista para porteiro</button>
+  
+  <h2>Importar lista (porteiro)</h2>
+  <input type="file" id="importFile">
+  <button onclick="importar()">📥 Carregar lista</button>
+
+  <script>
+    function exportar() {
+      const data = localStorage.getItem('convidados');
+      const blob = new Blob([data], {type: 'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lista_convidados.txt';
+      a.click();
+    }
+
+    function importar() {
+      const file = document.getElementById('importFile').files[0];
+      const reader = new FileReader();
+      reader.onload = e => {
+        localStorage.setItem('convidados', e.target.result);
+        alert("Lista carregada com sucesso!");
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>

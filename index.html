@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>NaLista Offline - Lindo</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px}
+  .box{max-width:900px;margin:auto;background:#16213e;padding:25px;border-radius:20px;box-shadow:0 0 30px rgba(0,0,0,.8)}
+  input,select,button{padding:15px;margin:10px 0;width:100%;border-radius:15px;border:none;font-size:17px;box-sizing:border-box}
+  button{background:#00d4aa;color:#000;font-weight:bold;cursor:pointer;transition:.2s}
+  button:hover{background:#00ffc4}
+  button:active{transform:scale(0.98)}
+  #lista div{background:#1a1a5e;padding:15px;margin:10px 0;border-radius:12px;font-size:18px}
+  h1{text-align:center;color:#ffd700;font-size:44px;margin:10px 0}
+  .gerar{background:#ffd700;color:#000;font-size:19px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>NaLista Offline</h1>
+  <input type="text" id="nome" placeholder="Nome completo">
+  <input type="text" id="acomp" placeholder="Acompanhantes (separados por vírgula)">
+  <select id="cat">
+    <option>VIP</option><option>PISTA</option><option>CAMAROTE</option><option>MESA</option><option>OPEN BAR</option>
+  </select>
+  <button onclick="add()">Adicionar à lista</button>
+  <button class="gerar" onclick="todos()">GERAR TODOS OS PDF</button>
+
+  <h2 style="color:#00d4aa">Convidados (<span id="total">0</span>)</h2>
+  <div id="lista"></div>
+</div>
+
+<script src="qrcode.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script src="html2canvas.min.js"></script>
+
+<script>
+let lista = JSON.parse(localStorage.getItem("n")||"[]"); atualiza();
+
+function add(){
+  let n = document.getElementById("nome").value.trim();
+  let a = document.getElementById("acomp").value.trim();
+  let c = document.getElementById("cat").value;
+  if(!n) return alert("Nome obrigatório!");
+  let id = Date.now().toString(36)+Math.random().toString(36).substr(2);
+  lista.push({id,nome:n,acomp:a,categoria:c,usado:false});
+  localStorage.setItem("n",JSON.stringify(lista));
+  document.getElementById("nome").value=""; document.getElementById("acomp").value="";
+  atualiza();
+  geraPDF(lista[lista.length-1]);
+}
+
+function atualiza(){
+  let l = document.getElementById("lista"); l.innerHTML="";
+  lista.forEach(x=>l.innerHTML+=`<div><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</div>`);
+  document.getElementById("total").textContent=lista.length;
+}
+
+async function geraPDF(p){
+  // Cria o convite lindo
+  let convite = document.createElement("div");
+  convite.style.cssText = `
+    width:500px; margin:30px auto; padding:60px 40px; background:linear-gradient(135deg,#667eea,#764ba2);
+    border-radius:35px; text-align:center; color:white; box-shadow:0 30px 60px rgba(0,0,0,.8);
+    font-family:Arial,sans-serif; position:absolute; left:-9999px; top:0;
+  `;
+  convite.innerHTML = `
+    <div style="background:rgba(0,0,0,.5); color:#ff0; padding:15px 50px; border-radius:50px; display:inline-block; font-size:38px; font-weight:bold">
+      FESTA EXCLUSIVA
+    </div>
+    <h2 style="margin:35px 0 15px; color:#a8ffde; font-size:28px">Você está convidado(a)!</h2>
+    <h1 style="font-size:48px; margin:10px 0; color:#ff0">${p.nome.toUpperCase()}</h1>
+    <p style="font-size:26px; margin:20px 0; color:#ddd">${p.acomp ? "+ "+p.acomp : ""}</p>
+    <div style="background:#1a1a2e; color:white; padding:18px 80px; border-radius:50px; display:inline-block; font-size:34px; font-weight:bold">
+      ${p.categoria}
+    </div>
+    <div id="qr" style="margin:40px auto"></div>
+    <p style="margin-top:40px; color:#ccc; font-size:16px">Código válido para entrada única • Validação 100% offline</p>
+  `;
+  document.body.appendChild(convite);
+
+  // Gera QR Code
+  new QRCode(convite.querySelector("#qr"), {
+    text: p.id,
+    width: 340, height: 340,
+    colorDark: "#000000", colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  await new Promise(r=>setTimeout(r,1200)); // espera renderizar
+
+  // Captura e gera PDF
+  let canvas = await html2canvas(convite, {scale:2, backgroundColor:null});
+  let img = canvas.toDataURL("image/png");
+  const {jsPDF} = window.jspdf;
+  let pdf = new jsPDF("p","mm","a4");
+  let largura = pdf.internal.pageSize.getWidth();
+  let proporcao = canvas.height / canvas.width;
+  let altura = largura * proporcao;
+  pdf.addImage(img,"PNG", 0, 20, largura, altura);
+  pdf.save(p.nome.split(" ")[0]+"_"+p.categoria+".pdf");
+
+  document.body.removeChild(convite);
+}
+
+async function todos(){
+  if(!lista.length) return alert("Lista vazia!");
+  for(let p of lista){
+    await geraPDF(p);
+    await new Promise(r=>setTimeout(r,900));
+  }
+  alert("TODOS os convites foram gerados com sucesso!");
+}
+</script>
+</body>
+</html>

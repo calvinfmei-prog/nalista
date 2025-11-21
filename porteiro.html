@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NaLista - Porteiro</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-reader@1.0.4/dist/qrcode-reader.min.js"></script>
+  <style>
+    body { font-family: Arial; background: #000; color: #0f0; text-align: center; padding: 20px; }
+    #video { width: 100%; max-width: 500px; border: 5px solid #0f0; border-radius: 15px; }
+    .ok { color: #0f0; font-size: 50px; }
+    .erro { color: #f00; font-size: 50px; }
+  </style>
+</head>
+<body>
+  <h1>🎟️ PORTARIA</h1>
+  <video id="video" autoplay playsinline></video>
+  <div id="resultado" style="margin-top:20px;font-size:24px"></div>
+
+  <script>
+    let convidados = JSON.parse(localStorage.getItem('convidados') || '[]');
+
+    const video = document.getElementById('video');
+    const resultado = document.getElementById('resultado');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => video.srcObject = stream);
+
+    const qrReader = new QrcodeReader();
+
+    setInterval(() => {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        qrReader.callback = (err, value) => {
+          if (err) return;
+          if (!value) return;
+
+          const idEscaneado = value.result;
+          const convidado = convidados.find(c => c.id === idEscaneado);
+
+          if (!convidado) {
+            resultado.innerHTML = `<div class="erro">ACESSO NEGADO<br>Convite inválido</div>`;
+            return;
+          }
+
+          if (convidado.usado) {
+            resultado.innerHTML = `<div class="erro">JÁ ENTROU<br>${convidado.nome}</div>`;
+            return;
+          }
+
+          // Marca como usado
+          convidado.usado = true;
+          localStorage.setItem('convidados', JSON.stringify(convidados));
+
+          resultado.innerHTML = `
+            <div class="ok">LIBERADO!<br>
+            ✅ ${convidado.nome.toUpperCase()}<br>
+            ${convidado.categoria}<br>
+            ${convidado.acompanhantes ? '+ ' + convidado.acompanhantes : ''}
+            </div>`;
+        };
+        qrReader.decode(video);
+      }
+    }, 500);
+  </script>
+</body>
+</html>
