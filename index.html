@@ -2,16 +2,18 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>NaLista - Convite PERFEITO</title>
+<title>NaLista - FINAL 100% SEM CORTE</title>
 <style>
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px}
+  body{font-family:'Segoe UI',sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px}
   .box{max-width:900px;margin:auto;background:#16213e;padding:30px;border-radius:20px}
   input,select,button{padding:16px;margin:10px 0;width:100%;border-radius:15px;border:none;font-size:18px}
   button{background:#00d4aa;color:#000;font-weight:bold;cursor:pointer}
   button:hover{background:#00ffc4}
   button.gerar{background:#ffd700;color:#000;font-size:20px}
-  #lista div{background:#1a1a5e;padding:16px;margin:10px 0;border-radius:12px;font-size:18px}
-  h1{text-align:center;color:#ffd700;font-size:46px;margin:10px 0}
+  !important}
+  button.excluir{background:#e74c3c;color:#fff;font-size:14px;padding:8px 16px;margin-left:10px}
+  #lista div{background:#1a1a5e;padding:16px;margin:10px 0;border-radius:12px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
+  h1{text-align:center;color:#ffd700;font-size:46px}
 </style>
 </head>
 <body>
@@ -33,7 +35,8 @@
 <script src="html2canvas.min.js"></script>
 
 <script>
-let lista = JSON.parse(localStorage.getItem("n")||"[]"); atualiza();
+let lista = JSON.parse(localStorage.getItem("n")||"[]");
+atualiza();
 
 function add(){
   let n=document.getElementById("nome").value.trim();
@@ -45,85 +48,85 @@ function add(){
   localStorage.setItem("n",JSON.stringify(lista));
   document.getElementById("nome").value=""; document.getElementById("acomp").value="";
   atualiza();
-  geraPDF(lista[lista.length-1]);
+}
+
+function excluir(i){
+  if(confirm(`Excluir ${lista[i].nome}?`)){
+    lista.splice(i,1);
+    localStorage.setItem("n",JSON.stringify(lista));
+    atualiza();
+  }
 }
 
 function atualiza(){
   let l=document.getElementById("lista"); l.innerHTML="";
-  lista.forEach(x=>l.innerHTML+=`<div><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</div>`);
+  lista.forEach((x,i)=> {
+    l.innerHTML += `<div><span><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</span>
+                    <button class="excluir" onclick="excluir(${i})">Excluir</button></div>`;
+  });
   document.getElementById("total").textContent=lista.length;
 }
 
 async function geraPDF(p){
   const convite = document.createElement("div");
-  convite.style.cssText = `
-    width:520px; height:920px; background:linear-gradient(135deg,#667eea,#764ba2);
-    border-radius:40px; overflow:hidden; position:absolute; left:-9999px; top:0;
-    box-shadow:0 30px 80px rgba(0,0,0,0.9); color:white; text-align:center;
-    padding:60px 40px 80px; box-sizing:border-box; font-family:'Segoe UI',sans-serif;
-  `;
+  convite.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:45px;position:absolute;left:-9999px;top:0;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;";
 
-  convite.innerHTML = `
-    <div style="background:rgba(0,0,0,0.5); color:#ffff00; font-size:42px; font-weight:bold;
-                padding:16px 60px; border-radius:50px; display:inline-block;">
+  const inner = document.createElement("div");
+  inner.style.cssText = "width:100%;padding:80px 45px 100px;text-align:center;color:white;box-sizing:border-box;";
+  inner.innerHTML = `
+    <div style="background:rgba(0,0,0,0.5);color:#ffff00;font-size:46px;font-weight:bold;padding:20px 80px;border-radius:50px;display:inline-block;">
       FESTA EXCLUSIVA
     </div>
-    <p style="color:#a8ffde; font-size:30px; margin:40px 0 20px;">Você está convidado(a)!</p>
-    <h1 style="font-size:58px; margin:15px 0 35px; color:#ffff00;
-               text-shadow:0 4px 12px rgba(0,0,0,0.6);">
+    <p style="color:#a8ffde;font-size:34px;margin:50px 0 25px;">Você está convidado(a)!</p>
+    <h1 style="font-size:66px;margin:20px 0 45px;color:#ffff00;text-shadow:0 5px 15px rgba(0,0,0,0.7);">
       ${p.nome.toUpperCase()}
     </h1>
-    <p style="font-size:28px; color:#ddd; margin:20px 0 50px;">
-      ${p.acomp ? "+ " + p.acomp : ""}
-    </p>
-    <div style="background:#1a1a2e; color:white; font-size:38px; font-weight:bold;
-                padding:20px 90px; border-radius:60px; display:inline-block; margin-bottom:60px;">
+    <p style="font-size:32px;color:#ddd;margin:25px 0 60px;">${p.acomp ? "+ "+p.acomp : ""}</p>
+    <div style="background:#1a1a2e;color:white;font-size:42px;font-weight:bold;padding:25px 110px;border-radius:60px;display:inline-block;margin-bottom:70px;">
       ${p.categoria}
     </div>
-    <div id="qr" style="width:360px; height:360px; margin:0 auto 60px;
-                        background:white; padding:20px; border-radius:30px;"></div>
-    <p style="color:#ccc; font-size:19px; margin-top:20px; line-height:1.5;">
+    <div id="qr" style="width:400px;height:400px;margin:0 auto 70px;background:white;padding:30px;border-radius:40px;"></div>
+    <p style="color:#ccc;font-size:21px;line-height:1.6;">
       Código válido para entrada única<br>Validação 100% offline
     </p>
   `;
-
+  convite.appendChild(inner);
   document.body.appendChild(convite);
 
-  new QRCode(convite.querySelector("#qr"), {
+  new QRCode(inner.querySelector("#qr"), {
     text: p.id,
-    width: 360,
-    height: 360,
+    width: 400,
+    height: 400,
     colorDark: "#000000",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
 
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 1800));
 
-  // Força o canvas a ter o tamanho exato do convite
   const canvas = await html2canvas(convite, {
-    scale: 2.5,
-    height: 920,
-    width: 520,
-    windowHeight: 920,
-    windowWidth: 520,
+    scale: 3,
+    width: 560,
+    height: 1000,
     backgroundColor: null,
     useCORS: true,
-    willReadFrequently: true   // elimina o aviso amarelo
+    willReadFrequently: true,
+    allowTaint: true,
+    scrollX: 0,
+    scrollY: 0
   });
 
   const img = canvas.toDataURL("image/png");
   const {jsPDF} = window.jspdf;
   const pdf = new jsPDF("p", "mm", "a4");
-  const pageW = 210;
-  pageH = 297;
-  imgW = pageW;
-  imgH = (canvas.height * pageW) / canvas.width;
+  const pdfW = 210;
+  const pdfH = 297;
+  const ratio = canvas.width / canvas.height;
+  const imgW = pdfW - 20;              // margem lateral pequena
+  const imgH = imgW / ratio;
+  const posY = (pdfH - imgH) / 2;       // centraliza verticalmente
 
-  // Centraliza verticalmente no A4
-  const posY = (pageH - imgH) / 2;
-
-  pdf.addImage(img, "PNG", 0, posY, imgW, imgH);
+  pdf.addImage(img, "PNG", 10, posY, imgW, imgH);
   pdf.save(p.nome.split(" ")[0] + "_" + p.categoria + ".pdf");
 
   document.body.removeChild(convite);
@@ -133,7 +136,7 @@ async function todos(){
   if(!lista.length) return alert("Lista vazia!");
   for(let p of lista){
     await geraPDF(p);
-    await new Promise(r=>setTimeout(r, 1000));
+    await new Promise(r=>setTimeout(r,1200));
   }
   alert("TODOS os convites foram gerados com perfeição!");
 }
