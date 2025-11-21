@@ -2,30 +2,35 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>NaLista - FINAL 100% SEM CORTE</title>
+<title>EXCLUSIVE PASS - Sistema Completo</title>
 <style>
   body{font-family:'Segoe UI',sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px}
-  .box{max-width:900px;margin:auto;background:#16213e;padding:30px;border-radius:20px}
-  input,select,button{padding:16px;margin:10px 0;width:100%;border-radius:15px;border:none;font-size:18px}
+  .box{max-width:900px;margin:auto;background:#16213e;padding:30px;border-radius:20px;box-shadow:0 0 30px #000}
+  input,select,button{padding:16px;margin:10px 0;width:100%;border-radius:15px;border:none;font-size:18px;box-sizing:border-box}
   button{background:#00d4aa;color:#000;font-weight:bold;cursor:pointer}
   button:hover{background:#00ffc4}
   button.gerar{background:#ffd700;color:#000;font-size:20px}
-  !important}
-  button.excluir{background:#e74c3c;color:#fff;font-size:14px;padding:8px 16px;margin-left:10px}
+  button.excluir{background:#e74c3c;color:#fff;padding:8px 16px;margin-left:10px;font-size:14px}
+  button.exp{background:#e67e22}
+  button.imp{background:#9b59b6}
   #lista div{background:#1a1a5e;padding:16px;margin:10px 0;border-radius:12px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
-  h1{text-align:center;color:#ffd700;font-size:46px}
+  h1{text-align:center;color:#ffffff;font-size:46px;margin:10px 0}
 </style>
 </head>
 <body>
 <div class="box">
-  <h1>NaLista Offline</h1>
+  <h1>EXCLUSIVE PASS</h1>
   <input type="text" id="nome" placeholder="Nome completo">
   <input type="text" id="acomp" placeholder="Acompanhantes (opcional)">
   <select id="cat">
     <option>VIP</option><option>PISTA</option><option>CAMAROTE</option><option>MESA</option><option>OPEN BAR</option>
   </select>
-  <button onclick="add()">Adicionar</button>
+  <button onclick="add()">Adicionar à lista</button>
   <button class="gerar" onclick="todos()">GERAR TODOS OS PDF</button>
+  <button class="exp" onclick="exportar()">EXPORTAR LISTA (arquivo JSON)</button>
+  <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA</button>
+  <input type="file" id="file" style="display:none" onchange="importar(event)">
+
   <h2 style="color:#00d4aa">Convidados (<span id="total">0</span>)</h2>
   <div id="lista"></div>
 </div>
@@ -45,7 +50,7 @@ function add(){
   if(!n) return alert("Nome obrigatório!");
   let id = Date.now().toString(36)+Math.random().toString(36).substr(2);
   lista.push({id,nome:n,acomp:a,categoria:c,usado:false});
-  localStorage.setItem("n",JSON.stringify(lista));
+  salvar();
   document.getElementById("nome").value=""; document.getElementById("acomp").value="";
   atualiza();
 }
@@ -53,39 +58,69 @@ function add(){
 function excluir(i){
   if(confirm(`Excluir ${lista[i].nome}?`)){
     lista.splice(i,1);
-    localStorage.setItem("n",JSON.stringify(lista));
+    salvar();
     atualiza();
   }
 }
 
+function salvar(){
+  localStorage.setItem("n",JSON.stringify(lista));
+}
+
 function atualiza(){
   let l=document.getElementById("lista"); l.innerHTML="";
-  lista.forEach((x,i)=> {
+  lista.forEach((x,i)=>{
     l.innerHTML += `<div><span><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</span>
                     <button class="excluir" onclick="excluir(${i})">Excluir</button></div>`;
   });
   document.getElementById("total").textContent=lista.length;
 }
 
+// EXPORTAR E IMPORTAR
+function exportar(){
+  const data = "data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(lista));
+  const a = document.createElement("a");
+  a.href = data;
+  a.download = "lista_convidados.json";
+  a.click();
+  alert("Lista exportada! Envie esse arquivo para o celular do porteiro.");
+}
+
+function importar(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e2){
+    try{
+      lista = JSON.parse(e2.target.result);
+      salvar();
+      atualiza();
+      alert("Lista importada com sucesso!");
+    }catch(err){ alert("Arquivo inválido"); }
+  };
+  reader.readAsText(file);
+}
+
+// GERA PDF (igual à sua última foto, 100% legível)
 async function geraPDF(p){
   const convite = document.createElement("div");
-  convite.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:45px;position:absolute;left:-9999px;top:0;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;";
+  convite.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:45px;position:absolute;left:-9999px;top:0;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,0,0,0.9);";
 
   const inner = document.createElement("div");
-  inner.style.cssText = "width:100%;padding:80px 45px 100px;text-align:center;color:white;box-sizing:border-box;";
+  inner.style.cssText = "width:100%;padding:80px 45px 120px;text-align:center;color:white;box-sizing:border-box;";
   inner.innerHTML = `
     <div style="background:rgba(0,0,0,0.5);color:#ffff00;font-size:46px;font-weight:bold;padding:20px 80px;border-radius:50px;display:inline-block;">
       FESTA EXCLUSIVA
     </div>
-    <p style="color:#a8ffde;font-size:34px;margin:50px 0 25px;">Você está convidado(a)!</p>
-    <h1 style="font-size:66px;margin:20px 0 45px;color:#ffff00;text-shadow:0 5px 15px rgba(0,0,0,0.7);">
+    <p style="color:#000000;font-size:34px;margin:50px 0 25px;">Você está convidado(a)!</p>
+    <h1 style="font-size:66px;margin:20px 0 45px;color:#FFFFFF;text-shadow:0 5px 15px rgba(0,0,0,0.7);">
       ${p.nome.toUpperCase()}
     </h1>
     <p style="font-size:32px;color:#ddd;margin:25px 0 60px;">${p.acomp ? "+ "+p.acomp : ""}</p>
-    <div style="background:#1a1a2e;color:white;font-size:42px;font-weight:bold;padding:25px 110px;border-radius:60px;display:inline-block;margin-bottom:70px;">
+    <div style="background:#1a1a2e;color:white;font-size:42px;font-weight:bold;padding:25px 110px;border-radius:60px;display:inline-block;margin-bottom:80px;">
       ${p.categoria}
     </div>
-    <div id="qr" style="width:400px;height:400px;margin:0 auto 70px;background:white;padding:30px;border-radius:40px;"></div>
+    <div id="qr" style="width:360px;height:360px;margin:0 auto 80px;background:white;padding:60px;border-radius:40px;box-shadow:0 10px 30px rgba(0,0,0,0.3);"></div>
     <p style="color:#ccc;font-size:21px;line-height:1.6;">
       Código válido para entrada única<br>Validação 100% offline
     </p>
@@ -95,39 +130,24 @@ async function geraPDF(p){
 
   new QRCode(inner.querySelector("#qr"), {
     text: p.id,
-    width: 400,
-    height: 400,
-    colorDark: "#000000",
-    colorLight: "#ffffff",
+    width: 360, height: 360,
+    colorDark: "#000000", colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
 
-  await new Promise(r => setTimeout(r, 1800));
+  await new Promise(r=>setTimeout(r,1800));
 
   const canvas = await html2canvas(convite, {
-    scale: 3,
-    width: 560,
-    height: 1000,
-    backgroundColor: null,
-    useCORS: true,
-    willReadFrequently: true,
-    allowTaint: true,
-    scrollX: 0,
-    scrollY: 0
+    scale:3, width:560, height:1000, backgroundColor:null, willReadFrequently:true
   });
 
   const img = canvas.toDataURL("image/png");
   const {jsPDF} = window.jspdf;
-  const pdf = new jsPDF("p", "mm", "a4");
-  const pdfW = 210;
-  const pdfH = 297;
-  const ratio = canvas.width / canvas.height;
-  const imgW = pdfW - 20;              // margem lateral pequena
-  const imgH = imgW / ratio;
-  const posY = (pdfH - imgH) / 2;       // centraliza verticalmente
-
-  pdf.addImage(img, "PNG", 10, posY, imgW, imgH);
-  pdf.save(p.nome.split(" ")[0] + "_" + p.categoria + ".pdf");
+  const pdf = new jsPDF("p","mm","a4");
+  const w = 180;
+  const h = (canvas.height * w) / canvas.width;
+  pdf.addImage(img,"PNG",15,(297-h)/2,w,h);
+  pdf.save(p.nome.split(" ")[0]+"_"+p.categoria+".pdf");
 
   document.body.removeChild(convite);
 }
@@ -138,7 +158,7 @@ async function todos(){
     await geraPDF(p);
     await new Promise(r=>setTimeout(r,1200));
   }
-  alert("TODOS os convites foram gerados com perfeição!");
+  alert("TODOS os convites foram gerados!");
 }
 </script>
 </body>
