@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>GOLDENPASS – Porteiro</title>
+<title>EXCLUSIVE PASS – Porteiro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   body{margin:0;padding:0;background:#0f0c29;color:#fff;font-family:Segoe UI,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
   .top{background:#16213e;padding:15px;text-align:center;flex-shrink:0}
-  h1{margin:0;font-size:32px;color:#ffd700}
+  h1{margin:0;font-size:32px;color:#ffffff}
   .contador{font-size:48px;color:#00d4aa;font-weight:bold}
   #video{width:100%;flex:1;background:#000;object-fit:cover}
   .lista{flex-shrink:0;max-height:280px;overflow-y:auto;padding:15px;background:#16213e}
@@ -24,7 +24,7 @@
 <body>
 
 <div class="top">
-  <h1>GOLDENPASS</h1>
+  <h1>EXCLUSIVE PASS - PORTARIA</h1>
   <div class="contador"><span id="contador">0</span> / <span id="total">0</span></div>
   <button class="impBtn" onclick="importarClique()">IMPORTAR LISTA</button>
   <input type="file" id="imp" style="display:none" accept=".json" onchange="importar(event)">
@@ -165,4 +165,5 @@ function tocarErro(){
 </script>
 </body>
 </html>
+
 
