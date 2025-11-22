@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>EXCLUSIVE PASS - Sistema Completo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
   body{font-family:'Segoe UI',sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px}
   .box{max-width:900px;margin:auto;background:#16213e;padding:30px;border-radius:20px;box-shadow:0 0 30px #000}
@@ -10,6 +13,7 @@
   button{background:#00d4aa;color:#000;font-weight:bold;cursor:pointer}
   button:hover{background:#00ffc4}
   button.gerar{background:#ffd700;color:#000;font-size:20px}
+  button.zip{background:#e67e22;color:#fff;font-size:20px}
   button.excluir{background:#e74c3c;color:#fff;padding:8px 16px;margin-left:10px;font-size:14px}
   button.exp{background:#e67e22}
   button.imp{background:#9b59b6}
@@ -30,19 +34,18 @@
   </select>
   
   <button onclick="add()">Adicionar à lista</button>
-  <button class="gerar" onclick="todos()">GERAR TODOS OS PDF</button>
+  <button class="gerar" onclick="todos()">GERAR TODOS OS PDF (individual)</button>
+  <button class="zip" onclick="gerarZip()">GERAR TODOS + ZIP (recomendado)</button>
   <button class="exp" onclick="exportar()">EXPORTAR LISTA (JSON)</button>
-  <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA</button>
-  <input type="file" id="file" style="display:none" onchange="importar(event)">
+  <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA CRIPTOGRAFADA</button>
+  <input type="file" id="file" style="display:none" accept=".json" onchange="importar(event)">
   
-  <!-- BOTÃO NOVO PARA APAGAR TUDO -->
   <button class="limpar" onclick="limparTudo()">LIMPAR TODA A LISTA</button>
 
   <h2 style="color:#00d4aa">Convidados (<span id="total">0</span>)</h2>
   <div id="lista"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>  
 <script src="qrcode.min.js"></script>
 <script src="jspdf.umd.min.js"></script>
 <script src="html2canvas.min.js"></script>
@@ -51,84 +54,31 @@
 let lista = JSON.parse(localStorage.getItem("n")||"[]");
 atualiza();
 
-function add(){
-  let n=document.getElementById("nome").value.trim();
-  let a=document.getElementById("acomp").value.trim();
-  let c=document.getElementById("cat").value;
-  if(!n) return alert("Nome obrigatório!");
-  let id = Date.now().toString(36)+Math.random().toString(36).substr(2);
-  lista.push({id,nome:n,acomp:a,categoria:c,usado:false});
-  salvar();
-  document.getElementById("nome").value=""; 
-  document.getElementById("acomp").value="";
-  atualiza();
-}
+// === FUNÇÃO NOVA: GERAR ZIP COM TODOS OS PDF ===
+async function gerarZip(){
+  if(!lista.length) return alert("Lista vazia!");
+  
+  const zip = new JSZip();
+  const pasta = zip.folder("Convites_EXCLUSIVE_PASS");
 
-function excluir(i){
-  if(confirm(`Excluir ${lista[i].nome}?`)){
-    lista.splice(i,1);
-    salvar();
-    atualiza();
+  alert("Gerando ZIP com todos os convites... Aguarde!");
+
+  for(let i = 0; i < lista.length; i++){
+    const p = lista[i];
+    const pdfBlob = await geraPDFcomoBlob(p);
+    const nomeArquivo = `${p.nome.split(" ")[0]}_${p.categoria}.pdf`;
+    pasta.file(nomeArquivo, pdfBlob);
   }
+
+  const zipBlob = await zip.generateAsync({type:"blob"});
+  saveAs(zipBlob, `EXCLUSIVE_PASS_TODOS_CONVITES_${lista.length}p.zip`);
+  alert(`PRONTO! ZIP baixado com ${lista.length} convites!`);
 }
 
-function salvar(){
-  localStorage.setItem("n",JSON.stringify(lista));
-}
-
-// === BOTÃO NOVO: LIMPAR TUDO ===
-function limparTudo(){
-  if(lista.length === 0){
-    alert("A lista já está vazia!");
-    return;
-  }
-  if(confirm("Tem certeza que quer APAGAR TODOS os convidados?")){
-    if(confirm("Sério mesmo? Essa ação NÃO pode ser desfeita!")){
-      lista = [];
-      salvar();
-      atualiza();
-      alert("Lista zerada com sucesso!");
-    }
-  }
-}
-
-function atualiza(){
-  let l=document.getElementById("lista"); 
-  l.innerHTML="";
-  lista.forEach((x,i)=>{
-    l.innerHTML += `<div><span><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</span>
-                    <button class="excluir" onclick="excluir(${i})">Excluir</button></div>`;
-  });
-  document.getElementById("total").textContent = lista.length;
-}
-
-function exportar(){
-  const data = "data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(lista));
-  const a = document.createElement("a");
-  a.href = data;
-  a.download = "lista_convidados.json";
-  a.click();
-}
-
-function importar(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e2){
-    try{
-      lista = JSON.parse(e2.target.result);
-      salvar();
-      atualiza();
-      alert("Lista importada com sucesso!");
-    }catch(err){ alert("Arquivo inválido"); }
-  };
-  reader.readAsText(file);
-}
-
-// GERA PDF (mantido exatamente como estava, com QR preto e fundo branco)
-async function geraPDF(p){
+// Gera PDF como Blob (pra colocar no ZIP)
+async function geraPDFcomoBlob(p){
   const convite = document.createElement("div");
-  convite.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:45px;position:absolute;left:-9999px;top:0;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,0,0,0.9);";
+  convite.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:45px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,0,0,0.9);position:absolute;left:-9999px;";
 
   const inner = document.createElement("div");
   inner.style.cssText = "width:100%;padding:80px 45px 120px;text-align:center;color:white;box-sizing:border-box;";
@@ -144,7 +94,7 @@ async function geraPDF(p){
     <div style="background:#1a1a2e;color:white;font-size:42px;font-weight:bold;padding:25px 110px;border-radius:60px;display:inline-block;margin-bottom:80px;">
       ${p.categoria}
     </div>
-    <div id="qr" style="width:360px;height:360px;margin:0 auto 80px;background:white;padding:60px;border-radius:40px;box-shadow:0 10px 30px rgba(0,0,0,0.3);"></div>
+    <div id="qr_${p.id}" style="width:360px;height:360px;margin:0 auto 80px;background:white;padding:60px;border-radius:40px;box-shadow:0 10px 30px rgba(0,0,0,0.3);"></div>
     <p style="color:#ccc;font-size:21px;line-height:1.6;">
       Código válido para entrada única<br>Validação 100% offline
     </p>
@@ -152,35 +102,95 @@ async function geraPDF(p){
   convite.appendChild(inner);
   document.body.appendChild(convite);
 
-  new QRCode(inner.querySelector("#qr"), {
-    text: p.id,
-    width: 360, height: 360,
-    colorDark: "#000000", 
-    colorLight: "#ffffff",
+  new QRCode(document.getElementById(`qr_${p.id}`), {
+    text: p.id, width: 360, height: 360,
+    colorDark: "#000000", colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
 
-  await new Promise(r=>setTimeout(r,1800));
+  await new Promise(r => setTimeout(r, 1800));
 
-  const canvas = await html2canvas(convite, {scale:3, width:560, height:1000, backgroundColor:null, willReadFrequently:true});
+  const canvas = await html2canvas(convite, {scale:3, backgroundColor:null});
   const img = canvas.toDataURL("image/png");
   const {jsPDF} = window.jspdf;
   const pdf = new jsPDF("p","mm","a4");
   const w = 180;
   const h = (canvas.height * w) / canvas.width;
   pdf.addImage(img,"PNG",15,(297-h)/2,w,h);
-  pdf.save(p.nome.split(" ")[0]+"_"+p.categoria+".pdf");
 
   document.body.removeChild(convite);
+  return pdf.output("blob");
 }
+
+// === RESTANTE DO CÓDIGO (add, importar, etc) ===
+function add(){
+  let n=document.getElementById("nome").value.trim();
+  let a=document.getElementById("acomp").value.trim();
+  let c=document.getElementById("cat").value;
+  if(!n) return alert("Nome obrigatório!");
+  let id = Date.now().toString(36)+Math.random().toString(36).substr(2);
+  lista.push({id,nome:n,acomp:a,categoria:c,usado:false});
+  salvar(); document.getElementById("nome").value=""; document.getElementById("acomp").value="";
+  atualiza();
+}
+
+function salvar(){ localStorage.setItem("n",JSON.stringify(lista)); }
+function atualiza(){
+  let l=document.getElementById("lista"); l.innerHTML="";
+  lista.forEach((x,i)=>{
+    l.innerHTML += `<div><span><b>${x.nome}</b> — ${x.categoria} ${x.acomp? "(+"+x.acomp+")":""}</span>
+                    <button class="excluir" onclick="excluir(${i})">Excluir</button></div>`;
+  });
+  document.getElementById("total").textContent = lista.length;
+}
+
+function excluir(i){ if(confirm(`Excluir ${lista[i].nome}?`)){ lista.splice(i,1); salvar(); atualiza(); } }
+function limparTudo(){ if(lista.length && confirm("APAGAR TUDO?") && confirm("Sério?")){ lista=[]; salvar(); atualiza(); } }
+function exportar(){ const a=document.createElement("a"); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(lista)); a.download="lista_convidados.json"; a.click(); }
 
 async function todos(){
   if(!lista.length) return alert("Lista vazia!");
-  for(let p of lista){
-    await geraPDF(p);
-    await new Promise(r=>setTimeout(r,1200));
-  }
-  alert("TODOS os convites foram gerados!");
+  for(let p of lista){ await geraPDFcomoBlob(p).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href=url; a.download=`${p.nome.split(" ")[0]}_${p.categoria}.pdf`; a.click(); URL.revokeObjectURL(url); }); await new Promise(r=>setTimeout(r,1200)); }
+  alert("Todos os PDFs gerados individualmente!");
+}
+
+function importar(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const textoCripto = ev.target.result.trim();
+    
+    // FRASE SECRETA QUE SÓ VOCÊ SABE (mude pra sua frase real)
+    const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRlIDI1MTI";
+    
+    // Gera uma chave forte a partir da frase (impossível de reverter)
+    const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+    const salt = CryptoJS.SHA256("CalilVIP" + FRASE_SECRETA).toString().substr(0,16);
+
+    try{
+      const bytes = CryptoJS.AES.decrypt(textoCripto, chave, {
+        iv: CryptoJS.enc.Utf8.parse(salt),
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+
+      const jsonPuro = bytes.toString(CryptoJS.enc.Utf8);
+      if(!jsonPuro || !jsonPuro.startsWith('[')) throw "inválido";
+
+      lista = JSON.parse(jsonPuro);
+      salvar();
+      atualiza();
+      if(document.getElementById("total")) document.getElementById("total").textContent = lista.length;
+      if(document.getElementById("contador")) document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
+      if(typeof atualizarLista === "function") atualizarLista();
+
+    }catch(err){
+      alert("Lista inválida ou corrompida!\nUse apenas arquivos gerados pelo sistema oficial.");
+    }
+  };
+  reader.readAsText(file);
 }
 </script>
 </body>
