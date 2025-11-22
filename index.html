@@ -35,7 +35,7 @@
   <button class="gerar" onclick="todos()">GERAR PDF INDIVIDUAIS</button>
   <button class="zip" onclick="gerarZip()">GERAR TODOS + ZIP (RECOMENDADO)</button>
   <button class="exp" onclick="exportar()">EXPORTAR LISTA</button>
-  <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA CRIPTOGRAFADA</button>
+  <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA</button>
   <input type="file" id="file" style="display:none" accept=".json" onchange="importar(event)">
   <button class="limpar" onclick="limparTudo()">LIMPAR LISTA</button>
 
@@ -43,7 +43,7 @@
   <div id="lista"></div>
 </div>
 
-<!-- TODAS AS BIBLIOTECAS NA ORDEM CERTA -->
+<!-- BIBLIOTECAS COM CARREGAMENTO SEGURO -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.4.4/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -53,6 +53,15 @@
 <script>
 let lista = JSON.parse(localStorage.getItem("n")||"[]");
 atualiza();
+
+// GARANTE QUE QRCode ESTÁ CARREGADO (resolve o erro no GitHub Pages)
+function esperarQRCode(callback) {
+  if (typeof QRCode !== "undefined") {
+    callback();
+  } else {
+    setTimeout(() => esperarQRCode(callback), 100);
+  }
+}
 
 // DOWNLOAD SEM BLOQUEIO DO WINDOWS
 function downloadSeguro(blob, nome) {
@@ -69,19 +78,19 @@ function downloadSeguro(blob, nome) {
 // GERAR ZIP COM TODOS OS CONVITES
 async function gerarZip() {
   if (!lista.length) return alert("Lista vazia!");
-  const zip = new JSZip();
-  const pasta = zip.folder("EXCLUSIVE_PASS");
+  esperarQRCode(async () => {
+    const zip = new JSZip();
+    const pasta = zip.folder("EXCLUSIVE_PASS");
 
-  alert("Gerando convites... Aguarde!");
+    for (let p of lista) {
+      const blob = await gerarPDFBlob(p);
+      pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.pdf`, blob);
+    }
 
-  for (let p of lista) {
-    const blob = await gerarPDFBlob(p);
-    pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.pdf`, blob);
-  }
-
-  const zipBlob = await zip.generateAsync({type:"blob"});
-  downloadSeguro(zipBlob, `EXCLUSIVE_PASS_${lista.length}_convites.zip`);
-  alert(`PRONTO! ${lista.length} convites no ZIP!`);
+    const zipBlob = await zip.generateAsync({type:"blob"});
+    downloadSeguro(zipBlob, `EXCLUSIVE_PASS_${lista.length}_convites.zip`);
+    alert(`PRONTO! ${lista.length} convites no ZIP!`);
+  });
 }
 
 // DESIGN 100% IGUAL À SUA FOTO
@@ -145,7 +154,6 @@ function add() {
 }
 
 function salvar() { localStorage.setItem("n", JSON.stringify(lista)); }
-
 function atualiza() {
   const l = document.getElementById("lista"); l.innerHTML = "";
   lista.forEach((x,i) => {
@@ -156,12 +164,7 @@ function atualiza() {
 }
 
 function excluir(i) { if(confirm(`Excluir ${lista[i].nome}?`)) { lista.splice(i,1); salvar(); atualiza(); } }
-
-function limparTudo() { 
-  if(lista.length && confirm("APAGAR TODOS?") && confirm("Sério mesmo?")) { 
-    lista=[]; salvar(); atualiza(); alert("Lista zerada!"); 
-  } 
-}
+function limparTudo() { if(lista.length && confirm("APAGAR TODOS?") && confirm("Sério mesmo?")) { lista=[]; salvar(); atualiza(); alert("Lista zerada!"); } }
 
 function exportar() {
   const a = document.createElement("a");
@@ -191,15 +194,16 @@ function importar(e) {
   reader.readAsText(file);
 }
 
-// GERAR INDIVIDUAIS (opcional)
 async function todos() {
   if (!lista.length) return alert("Lista vazia!");
-  for (let p of lista) {
-    const blob = await gerarPDFBlob(p);
-    downloadSeguro(blob, `${p.nome.split(" ")[0]}_${p.categoria}.pdf`);
-    await new Promise(r => setTimeout(r, 600));
-  }
-  alert("Todos gerados individualmente!");
+  esperarQRCode(async () => {
+    for (let p of lista) {
+      const blob = await gerarPDFBlob(p);
+      downloadSeguro(blob, `${p.nome.split(" ")[0]}_${p.categoria}.pdf`);
+      await new Promise(r => setTimeout(r, 600));
+    }
+    alert("Todos gerados individualmente!");
+  });
 }
 </script>
 </body>
