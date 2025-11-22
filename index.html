@@ -28,38 +28,33 @@
   <input type="text" id="nome" placeholder="Nome completo">
   <input type="text" id="acomp" placeholder="Acompanhantes (opcional)">
   <select id="cat">
-    <option>VIP</option>
-    <option>PISTA</option>
-    <option>CAMAROTE</option>
-    <option>MESA</option>
-    <option>OPEN BAR</option>
+    <option>VIP</option><option>PISTA</option><option>CAMAROTE</option><option>MESA</option><option>OPEN BAR</option>
   </select>
   
-  <button onclick="add()">ADICIONAR À LISTA</button>
+  <button onclick="add()">ADICIONAR</button>
   <button class="gerar" onclick="todos()">GERAR PDF INDIVIDUAIS</button>
   <button class="zip" onclick="gerarZip()">GERAR TODOS + ZIP (RECOMENDADO)</button>
-  <button class="exp" onclick="exportar()">EXPORTAR LISTA JSON</button>
+  <button class="exp" onclick="exportar()">EXPORTAR LISTA</button>
   <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA CRIPTOGRAFADA</button>
   <input type="file" id="file" style="display:none" accept=".json" onchange="importar(event)">
-  <button class="limpar" onclick="limparTudo()">LIMPAR TODA A LISTA</button>
+  <button class="limpar" onclick="limparTudo()">LIMPAR LISTA</button>
 
   <h2 style="color:#00d4aa;margin-top:30px">Convidados (<span id="total">0</span>)</h2>
   <div id="lista"></div>
 </div>
 
-<!-- BIBLIOTECAS -->
+<!-- TODAS AS BIBLIOTECAS NA ORDEM CERTA -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.4.4/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
 <script>
 let lista = JSON.parse(localStorage.getItem("n")||"[]");
 atualiza();
 
-// === DOWNLOAD SEGURO (NUNCA MAIS BLOQUEADO PELO WINDOWS) ===
+// DOWNLOAD SEM BLOQUEIO DO WINDOWS
 function downloadSeguro(blob, nome) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -71,54 +66,58 @@ function downloadSeguro(blob, nome) {
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
-// === GERAR TODOS OS PDF + ZIP (SEM BLOQUEIO) ===
+// GERAR ZIP COM TODOS OS CONVITES
 async function gerarZip() {
   if (!lista.length) return alert("Lista vazia!");
   const zip = new JSZip();
-  const pasta = zip.folder("EXCLUSIVE_PASS_CONVITES");
+  const pasta = zip.folder("EXCLUSIVE_PASS");
+
+  alert("Gerando convites... Aguarde!");
 
   for (let p of lista) {
-    const pdfBlob = await gerarPDFBlob(p);
-    pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.pdf`, pdfBlob);
+    const blob = await gerarPDFBlob(p);
+    pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.pdf`, blob);
   }
 
-  const zipBlob = await zip.generateAsync({type: "blob"});
+  const zipBlob = await zip.generateAsync({type:"blob"});
   downloadSeguro(zipBlob, `EXCLUSIVE_PASS_${lista.length}_convites.zip`);
-  alert(`PRONTO! ${lista.length} convites baixados em um único ZIP!`);
+  alert(`PRONTO! ${lista.length} convites no ZIP!`);
 }
 
-// === GERAR PDF COM DESIGN IDÊNTICO À SUA FOTO ===
+// DESIGN 100% IGUAL À SUA FOTO
 async function gerarPDFBlob(p) {
   const div = document.createElement("div");
-  div.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);position:absolute;left:-9999px;top:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:45px;box-shadow:0 30px 80px rgba(0,0,0,0.9);";
-  
+  div.style.cssText = "width:560px;height:1000px;background:linear-gradient(135deg,#667eea,#764ba2);position:absolute;left:-9999px;top:0;overflow:hidden;display:flex;align-items:center;justify-content:center;border-radius:45px;box-shadow:0 30px 80px rgba(0,0,0,0.9);";
+
   div.innerHTML = `
-    <div style="text-align:center;color:white;width:100%;padding:60px 40px;box-sizing:border-box;">
-      <div style="background:#1a1a2e;color:#ffd700;font-size:42px;font-weight:bold;padding:15px 50px;border-radius:50px;display:inline-block;margin-bottom:30px;">
+    <div style="width:100%;text-align:center;color:white;padding:60px 40px;box-sizing:border-box;">
+      <div style="background:#1a1a2e;color:#ffd700;font-size:46px;font-weight:bold;padding:20px 60px;border-radius:50px;display:inline-block;margin-bottom:40px;">
         FESTA EXCLUSIVA
       </div>
-      <p style="color:#a0e7ff;font-size:32px;margin:40px 0 20px;">Você está convidado(a)!</p>
-      <h1 style="font-size:72px;margin:30px 0 60px;color:#ffd700;text-shadow:0 4px 20px rgba(0,0,0,0.8);font-weight:bold;">
+      <p style="color:#a0e7ff;font-size:32px;margin:30px 0;">Você está convidado(a)!</p>
+      <h1 style="font-size:78px;margin:50px 0;color:#ffd700;text-shadow:0 5px 20px rgba(0,0,0,0.8);font-weight:900;">
         ${p.nome.toUpperCase()}
       </h1>
-      <div style="background:#1a1a2e;color:white;font-size:42px;font-weight:bold;padding:20px 80px;border-radius:60px;display:inline-block;margin:60px 0;">
+      <p style="font-size:32px;color:#ddd;margin:40px 0 70px;">${p.acomp ? "+ " + p.acomp : ""}</p>
+      <div style="background:#1a1a2e;color:white;font-size:48px;font-weight:bold;padding:25px 100px;border-radius:60px;display:inline-block;margin-bottom:80px;">
         ${p.categoria}
       </div>
-      <div id="qr-${p.id}" style="width:380px;height:380px;margin:80px auto;background:white;padding:20px;border-radius:30px;box-shadow:0 15px 40px rgba(0,0,0,0.6);"></div>
-      <p style="color:#ccc;font-size:20px;margin-top:40px;">Código válido para entrada única<br>Validação 100% offline</p>
+      <div id="qr-${p.id}" style="width:380px;height:380px;margin:0 auto 60px;background:white;padding:20px;border-radius:30px;box-shadow:0 15px 40px rgba(0,0,0,0.6);"></div>
+      <p style="color:#ccc;font-size:20px;">Código válido para entrada única<br>Validação 100% offline</p>
     </div>
   `;
   document.body.appendChild(div);
 
   new QRCode(document.getElementById(`qr-${p.id}`), {
     text: p.id,
-    width: 340, height: 340,
+    width: 340,
+    height: 340,
     colorDark: "#000000",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
 
-  await new Promise(r => setTimeout(r, 1800));
+  await new Promise(r => setTimeout(r, 2000));
   const canvas = await html2canvas(div, {scale: 3, backgroundColor: null});
   document.body.removeChild(div);
 
@@ -131,7 +130,7 @@ async function gerarPDFBlob(p) {
   return pdf.output("blob");
 }
 
-// === FUNÇÕES BÁSICAS ===
+// FUNÇÕES BÁSICAS
 function add() {
   const n = document.getElementById("nome").value.trim();
   const a = document.getElementById("acomp").value.trim();
@@ -139,11 +138,14 @@ function add() {
   if (!n) return alert("Nome obrigatório!");
   const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
   lista.push({id, nome: n, acomp: a, categoria: c, usado: false});
-  salvar(); document.getElementById("nome").value = ""; document.getElementById("acomp").value = "";
+  salvar(); 
+  document.getElementById("nome").value = ""; 
+  document.getElementById("acomp").value = "";
   atualiza();
 }
 
 function salvar() { localStorage.setItem("n", JSON.stringify(lista)); }
+
 function atualiza() {
   const l = document.getElementById("lista"); l.innerHTML = "";
   lista.forEach((x,i) => {
@@ -154,7 +156,12 @@ function atualiza() {
 }
 
 function excluir(i) { if(confirm(`Excluir ${lista[i].nome}?`)) { lista.splice(i,1); salvar(); atualiza(); } }
-function limparTudo() { if(lista.length && confirm("APAGAR TODOS?") && confirm("Sério mesmo?")) { lista=[]; salvar(); atualiza(); alert("Lista zerada!"); } }
+
+function limparTudo() { 
+  if(lista.length && confirm("APAGAR TODOS?") && confirm("Sério mesmo?")) { 
+    lista=[]; salvar(); atualiza(); alert("Lista zerada!"); 
+  } 
+}
 
 function exportar() {
   const a = document.createElement("a");
@@ -163,7 +170,6 @@ function exportar() {
   a.click();
 }
 
-// IMPORTAR LISTA CRIPTOGRAFADA (com frase secreta)
 function importar(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -175,23 +181,25 @@ function importar(e) {
     const iv = CryptoJS.SHA256("CalilVIP" + FRASE).toString().substr(0,16);
     try {
       const bytes = CryptoJS.AES.decrypt(texto, chave, {iv: CryptoJS.enc.Utf8.parse(iv), mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7});
-      lista = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+      const json = bytes.toString(CryptoJS.enc.Utf8);
+      if (!json.startsWith('[')) throw "";
+      lista = JSON.parse(json);
       salvar(); atualiza();
-      alert(`Lista importada! ${lista.length} convidados carregados.`);
-    } catch { alert("Lista inválida ou corrompida!"); }
+      alert(`Lista importada! ${lista.length} convidados.`);
+    } catch { alert("Lista inválida!"); }
   };
   reader.readAsText(file);
 }
 
-// GERAR PDF INDIVIDUAIS (opcional)
+// GERAR INDIVIDUAIS (opcional)
 async function todos() {
   if (!lista.length) return alert("Lista vazia!");
   for (let p of lista) {
     const blob = await gerarPDFBlob(p);
     downloadSeguro(blob, `${p.nome.split(" ")[0]}_${p.categoria}.pdf`);
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 600));
   }
-  alert("Todos os PDFs individuais foram gerados!");
+  alert("Todos gerados individualmente!");
 }
 </script>
 </body>
