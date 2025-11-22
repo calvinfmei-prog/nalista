@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>  
 <title>EXCLUSIVE PASS – Porteiro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
@@ -97,18 +96,41 @@ function importarClique(){
 }
 function importar(e){
   const file = e.target.files[0];
-  if(!file) { if(cameraVisivel) escaneando = true; tick(); return; }
-  const r = new FileReader();
-  r.onload = ev => {
+  if(!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const textoCripto = ev.target.result.trim();
+    
+    // FRASE SECRETA QUE SÓ VOCÊ SABE (mude pra sua frase real)
+    const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRlIDI1MTI";
+    
+    // Gera uma chave forte a partir da frase (impossível de reverter)
+    const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+    const salt = CryptoJS.SHA256("CalilVIP" + FRASE_SECRETA).toString().substr(0,16);
+
     try{
-      lista = JSON.parse(ev.target.result);
-      document.getElementById("total").textContent = lista.length;
-      document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
-      atualizarLista();
-    }catch{ alert("Arquivo inválido"); }
-    if(cameraVisivel){ escaneando = true; tick(); }
+      const bytes = CryptoJS.AES.decrypt(textoCripto, chave, {
+        iv: CryptoJS.enc.Utf8.parse(salt),
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+
+      const jsonPuro = bytes.toString(CryptoJS.enc.Utf8);
+      if(!jsonPuro || !jsonPuro.startsWith('[')) throw "inválido";
+
+      lista = JSON.parse(jsonPuro);
+      salvar();
+      atualiza();
+      if(document.getElementById("total")) document.getElementById("total").textContent = lista.length;
+      if(document.getElementById("contador")) document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
+      if(typeof atualizarLista === "function") atualizarLista();
+
+    }catch(err){
+      alert("Lista inválida ou corrompida!\nUse apenas arquivos gerados pelo sistema oficial.");
+    }
   };
-  r.readAsText(file);
+  reader.readAsText(file);
 }
 
 // CÂMERA
@@ -193,7 +215,6 @@ function tocarErro(){
 </script>
 </body>
 </html>
-
 
 
 
