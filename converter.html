@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>EXCLUSIVE PASS – Conversor Blindado</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<style>
+  body{font-family:'Segoe UI',sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px;min-height:100vh}
+  .box{max-width:900px;margin:40px auto;background:#16213e;padding:30px;border-radius:20px;box-shadow:0 0 40px rgba(0,0,0,0.8)}
+  h1{text-align:center;color:#ffd700;font-size:42px;margin:0 0 30px}
+  textarea{width:100%;height:380px;background:#1a1a2e;color:#fff;border:none;border-radius:15px;padding:20px;font-size:18px;box-sizing:border-box}
+  button{padding:16px;margin:15px 0;width:100%;border-radius:15px;border:none;font-size:22px;font-weight:bold;cursor:pointer}
+  button{background:#00d4aa;color:#000}
+  button:hover{background:#00ffc4}
+  button.gerar{background:#ffd700;color:#000}
+  .info{color:#00d4aa;text-align:center;margin:20px 0;font-size:18px;line-height:1.8}
+  .exemplo{background:#1e1e2e;padding:15px;border-radius:12px;margin:20px 0;font-family:monospace;color:#a8ffde}
+  .seguro{color:#2ecc71;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>EXCLUSIVE PASS</h1>
+  <h2 style="text-align:center;color:#fff">Conversor Blindado → Lista Criptografada</h2>
+
+  <p class="info">
+    <span class="seguro">SEGURANÇA MÁXIMA:</span> Ninguém abre, edita ou falsifica<br>
+    Formato: <strong>Nome +acomp CATEGORIA</strong> (categoria opcional)
+  </p>
+
+  <div class="exemplo">
+Calil OPEN BAR<br>
+Maria Silva +2 PISTA<br>
+João + Ana e Pedro CAMAROTE<br>
+Lucas VIP<br>
+Fernanda + Pedro MESA
+  </div>
+
+  <textarea id="nomes" placeholder="Calil OPEN BAR\nMaria Silva +2 PISTA\nLucas VIP"></textarea>
+
+  <button class="gerar" onclick="gerarJSON()">GERAR LISTA 100% BLINDADA</button>
+</div>
+
+<script>
+// MUDE APENAS ESTA LINHA COM UMA FRASE QUE SÓ VOCÊ SABE (ex: data da festa + nome da mãe + número da sorte)
+const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRlIDI1MTI";
+
+function gerarJSON(){
+  const texto = document.getElementById("nomes").value.trim();
+  if(!texto){ alert("Cole a lista de convidados!"); return; }
+
+  const linhas = texto.split(/\n|,/).map(l => l.trim()).filter(Boolean);
+  const lista = [];
+  const categoriasValidas = ["VIP","PISTA","CAMAROTE","MESA","OPEN BAR"];
+
+  linhas.forEach(linha => {
+    if(!linha) return;
+    const palavras = linha.split(/\s+/);
+    let categoria = "VIP";
+
+    // Detecta categoria no final
+    const ultima = palavras[palavras.length-1].toUpperCase();
+    if(categoriasValidas.includes(ultima)){
+      categoria = ultima;
+      palavras.pop();
+    }
+
+    let resto = palavras.join(" ");
+    let nome = resto;
+    let acomp = "";
+
+    if(resto.includes("+")){
+      const partes = resto.split("+");
+      nome = partes[0].trim();
+      acomp = partes.slice(1).join("+").trim();
+    }
+
+    if(!nome) return;
+
+    const id = Date.now().toString(36)+Math.random().toString(36).substr(2)+Math.random().toString(36).substr(2);
+
+    lista.push({id, nome, acomp, categoria, usado:false});
+  });
+
+  if(lista.length===0){
+    alert("Nenhum convidado válido encontrado!");
+    return;
+  }
+
+  // CRIPTOGRAFIA BLINDADA (sem senha visível)
+  const jsonPuro = JSON.stringify(lista);
+  const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+  const iv = CryptoJS.SHA256("CalilVIP" + FRASE_SECRETA).toString().substr(0,16);
+
+  const criptografado = CryptoJS.AES.encrypt(jsonPuro, chave, {
+    iv: CryptoJS.enc.Utf8.parse(iv),
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7
+  }).toString();
+
+  const blob = new Blob([criptografado], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lista_blindada_${lista.length}p.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  alert(`LISTA 100% BLINDADA GERADA!\n${lista.length} convidados protegidos.\nNinguém no mundo consegue abrir sem a sua frase secreta.`);
+}
+</script>
+</body>
+</html>
