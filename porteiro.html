@@ -107,7 +107,7 @@ function importar(e){
     
     // Gera uma chave forte a partir da frase (impossível de reverter)
     const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
-    const salt = CryptoJS.SHA256("CalilVIP" + FRASE_SECRETA).toString().substr(0,16);
+    const salt = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
 
     try{
       const bytes = CryptoJS.AES.decrypt(textoCripto, chave, {
