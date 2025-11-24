@@ -183,6 +183,13 @@ async function enviarTodosWhatsApp() {
     alert("Erro ao gerar convites. Tente novamente.");
   }
 }
+/*-----------------------------------------------------------------*/
+function abrirDisparoMassa() {
+  const win = window.open('disparo.html', '_blank');
+  setTimeout(() => {
+    win.postMessage({ lista: lista }, '*');
+  }, 2000);
+}
 /* ------------------------- CRIA CONVITE --------------------------*/
 async function criarConvite(p) {
   // 1) Constrói o SVG (como string)
