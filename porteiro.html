@@ -100,21 +100,21 @@ function importarClique(){
 function importar(e){
   const file = e.target.files[0];
   if(!file) return;
-  
+
   const reader = new FileReader();
   reader.onload = function(ev){
     const textoCripto = ev.target.result.trim();
-    
-    // FRASE SECRETA QUE SÓ VOCÊ SABE (mude pra sua frase real)
+
+    // FRASE SECRETA (deve ser idêntica à do conversor)
     const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRlIDI1MTI";
-    
-    // Gera uma chave forte a partir da frase (impossível de reverter)
+
+    // Gera a chave e o IV exatamente como no conversor
     const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
     const iv = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
 
     try{
       const bytes = CryptoJS.AES.decrypt(textoCripto, chave, {
-        iv: CryptoJS.enc.Utf8.parse(salt),
+        iv: CryptoJS.enc.Utf8.parse(iv),
         mode: CryptoJS.mode.CBC,
         padding: CryptoJS.pad.Pkcs7
       });
@@ -130,6 +130,7 @@ function importar(e){
       if(typeof atualizarLista === "function") atualizarLista();
 
     }catch(err){
+      console.error("Falha ao decodificar lista:", err);
       alert("Lista inválida ou corrompida!\nUse apenas arquivos gerados pelo sistema oficial.");
     }
   };
@@ -218,6 +219,7 @@ function tocarErro(){
 </script>
 </body>
 </html>
+
 
 
 
