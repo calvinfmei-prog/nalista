@@ -180,36 +180,85 @@ function ajustarFonte(elemento, tamanhoInicial, tamanhoMinimo) {
 /* ------------------------- GERAR PNG --------------------------*/
 async function gerarIndividuais() {
   if (!lista.length) return alert("Lista vazia!");
-
-  for (let p of lista) {
-    const canvas = await criarConvite(p);
-
-    await new Promise(res => {
-      canvas.toBlob(b => {
-        download(b, `${p.nome.split(" ")[0]}_${p.categoria}.png`);
-        setTimeout(res, 300); // dá tempo entre downloads
-      });
-    });
+  if (lista.length > 15) {
+    if (!confirm(`Você tem ${lista.length} convidados. No PC, baixar muitos PNGs de uma vez pode ser bloqueado pelo navegador.\n\nRecomendo usar o ZIP. Deseja continuar mesmo assim?`)) {
+      return;
+    }
   }
 
-  alert("PNG gerados!");
+  const botao = event.target;
+  botao.disabled = true;
+  botao.textContent = "GERANDO PNGS...";
+
+  let contador = 0;
+  for (let p of lista) {
+    try {
+      contador++;
+      botao.textContent = `BAIXANDO ${contador}/${lista.length}...`;
+      const canvas = await criarConvite(p);
+      canvas.toBlob(blob => {
+        if (blob) {
+          const nome = `${p.nome.trim().split(" ")[0]}_${p.categoria.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+          download(blob, nome);
+        }
+      }, 'image/png', 0.95);
+      
+      // Pequena pausa entre downloads para o Chrome não bloquear
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      console.error("Erro no convite:", p.nome, e);
+    }
+  }
+
+  setTimeout(() => {
+    botao.disabled = false;
+    botao.textContent = "GERAR PNG INDIVIDUAIS";
+    alert("Tentativa de download concluída (alguns podem ter sido bloqueados no PC). Use o ZIP para garantir tudo!");
+  }, 1000);
 }
 
 /* ------------------------- GERAR ZIP --------------------------*/
 async function gerarZip() {
   if (!lista.length) return alert("Lista vazia!");
 
-  const zip = new JSZip();
-  const pasta = zip.folder("EXCLUSIVE_PASS");
+  const botao = event.target;
+  botao.disabled = true;
+  botao.textContent = "GERANDO... (pode demorar)";
 
-  for (let p of lista) {
-    const canvas = await criarConvite(p);
-    const blob = await new Promise(res => canvas.toBlob(res));
-    pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.png`, blob);
+  try {
+    const zip = new JSZip();
+    const pasta = zip.folder("EXCLUSIVE_PASS");
+
+    let contador = 0;
+    const total = lista.length;
+
+    for (let p of lista) {
+      contador++;
+      botao.textContent = `GERANDO... ${contador}/${total}`;
+
+      const canvas = await criarConvite(p);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+      
+      const nomeArquivo = `${p.nome.trim().split(" ")[0]}_${p.categoria.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+      pasta.file(nomeArquivo, blob);
+    }
+
+    botao.textContent = "FINALIZANDO ZIP...";
+
+    const zipBlob = await zip.generateAsync({type: "blob"}, metadata => {
+      // progresso opcional do ZIP
+    });
+
+    download(zipBlob, `EXCLUSIVE_PASS_${lista.length}_convites_${new Date().toLocaleDateString('pt-BR')}.zip`);
+    
+    alert(`SUCESSO! ${lista.length} convites gerados e baixados como ZIP.`);
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao gerar os convites. Tente novamente.");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = "GERAR TODOS + ZIP (RECOMENDADO)";
   }
-
-  const zipBlob = await zip.generateAsync({type:"blob"});
-  download(zipBlob, `EXCLUSIVE_PASS_${lista.length}.zip`);
 }
 
 /* ------------------------- IMPORTAR --------------------------*/
@@ -271,4 +320,5 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
 
