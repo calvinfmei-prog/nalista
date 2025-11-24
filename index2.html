@@ -324,17 +324,17 @@ async function gerarEPublicarConvites() {
       const canvas = await criarConvite(p);
       const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 0.95));
 
-      // Gera senha curta e única (4 letras/números)
+      // Gera senha curta
       const senha = Math.random().toString(36).substring(2, 6).toUpperCase();
 
-      // Converte para base64 para enviar
+      // Converte para base64
       const base64 = await new Promise(resolve => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.readAsDataURL(blob);
       });
-/*-------------AQUI---------------*/
-      // Envia para o Firebase (URL CORRETA!)
+
+      // URL CORRETA do seu Firebase
       const response = await fetch('https://nalista-c58f2-default-rtdb.firebaseio.com/convites.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -347,25 +347,27 @@ async function gerarEPublicarConvites() {
           usado: false
         })
       });
-      
+
       if (!response.ok) {
         throw new Error(`Erro Firebase: ${response.status}`);
-}
+      }
 
-const resultado = await response.json();
-const id = resultado.name; // ← esse é o ID único gerado pelo Firebase
-const link = `https://calvinfmei-prog.github.io/nalista1/convite.html?id=${id}&s=${senha}`;
-convitesPublicados.push({ pessoa: p, link, senha });
+      const resultado = await response.json();
+      const id = resultado.name; // ID gerado pelo Firebase
+      const link = `https://calvinfmei-prog.github.io/nalista1/convite.html?id=${id}&s=${senha}`;
 
-    // Copia todos os links com senha para área de transferência
-    const textoParaEnviar = convitesPublicados
+      convitesPublicados.push({ pessoa: p, link, senha });
+    }
+
+    // Copia todos os links + senhas para a área de transferência
+    const textoParaWhats = convitesPublicados
       .map(c => `${c.pessoa.nome.split(" ")[0]} → ${c.link} (senha: ${c.senha})`)
       .join("\n");
 
-    await navigator.clipboard.writeText(textoParaEnviar);
+    await navigator.clipboard.writeText(textoParaWhats);
 
-    botao.textContent = `PRONTO! ${convitesPublicados.length} convites publicados`;
-    alert(`SUCESSO TOTAL!\n\n${convitesPublicados.length} convites publicados online.\n\nTodos os links + senhas foram copiados!\n\nAgora é só colar no WhatsApp e enviar em massa.`);
+    botao.textContent = `PRONTO! ${convitesPublicados.length} publicados`;
+    alert(`SUCESSO!\n\n${convitesPublicados.length} convites publicados online.\n\nLinks + senhas copiados!\nAgora é só colar no WhatsApp e enviar em massa.`);
 
     setTimeout(() => {
       botao.textContent = textoOriginal;
@@ -374,9 +376,9 @@ convitesPublicados.push({ pessoa: p, link, senha });
 
   } catch (err) {
     console.error(err);
-    alert("Erro ao publicar. Verifique sua conexão.");
-    botao.disabled = false;
+    alert("Erro ao publicar. Verifique a conexão ou a URL do Firebase.");
     botao.textContent = textoOriginal;
+    botao.disabled = false;
   }
 }
 /*-------------------------- ENVIAR CONVITE PELO ZAP COM IMAGEM ------------------*/
