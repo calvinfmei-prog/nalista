@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Converter - EXCLUSIVE PASS">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
 <meta charset="UTF-8">
 <title>EXCLUSIVE PASS – Conversor Blindado</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,6 +25,17 @@
 </style>
 </head>
 <body>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registrado com sucesso'))
+      .catch(err => console.log('SW falhou:', err));
+  });
+}
+</script>
+  
 <div class="box">
   <h1>EXCLUSIVE PASS</h1>
   <h2 style="text-align:center;color:#fff">Conversor Blindado → Lista Criptografada</h2>
