@@ -268,31 +268,26 @@ function limparTudo(){
 }
 
 function exportar(){
-    if(!lista.length) return alert("Lista vazia!");
+  const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRkIDI1MTI";
+  
+  const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+  const iv    = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
 
-    // FRASE SECRETA (igual no porteiro!)
-    const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkZGUgMjUxMg";
+  // 1) Transforma em JSON puro
+  const json = JSON.stringify(lista);
 
-    // mesma chave e IV
-    const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
-    const iv    = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
+  // 2) Criptografa exatamente como o porteiro espera
+  const encrypted = CryptoJS.AES.encrypt(json, chave, {
+    iv: CryptoJS.enc.Utf8.parse(iv),
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7
+  }).toString();
 
-    // texto puro
-    const textoPuro = JSON.stringify(lista);
-
-    // criptografa
-    const cript = CryptoJS.AES.encrypt(textoPuro, chave, {
-        iv: CryptoJS.enc.Utf8.parse(iv),
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-    }).toString();
-
-    // download
-    const blob = new Blob([cript], {type:"application/json"});
-    download(blob, "lista_convidados_criptografada.json");
-
-    alert("Arquivo exportado com criptografia AES!");
+  // 3) Salva arquivo .json ENCRIPTADO
+  const blob = new Blob([encrypted], {type:"text/plain"});
+  download(blob, "lista_convidados_encriptada.json");
 }
+
 
 
 function importar(e){
@@ -330,5 +325,6 @@ function importar(e){
 </script>
 </body>
 </html>
+
 
 
