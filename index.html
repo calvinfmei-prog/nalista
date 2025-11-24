@@ -49,6 +49,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 
 <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registrado com sucesso'))
+      .catch(err => console.log('SW falhou:', err));
+  });
+}
+</script>
+
+<script>
 let lista = JSON.parse(localStorage.getItem("n")||"[]");
 atualiza();
 
@@ -260,10 +270,3 @@ function limparTudo(){
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
