@@ -306,9 +306,26 @@ function importar(e){
 /* ------------------------- OUTROS --------------------------*/
 function salvar(){ localStorage.setItem("n", JSON.stringify(lista)); }
 
+function excluirConvidado(index){
+  if(confirm(`Excluir "${lista[index].nome}" da lista?`)){
+    lista.splice(index, 1);
+    salvar();
+    atualiza();
+  }
+}
+
 function atualiza(){
   const l = document.getElementById("lista");
-  l.innerHTML = lista.map(p=>`<div><b>${p.nome}</b> — ${p.categoria}</div>`).join("");
+  l.innerHTML = lista.map((p, index) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#1a1a5e; padding:16px; margin:10px 0; border-radius:12px; font-size:18px;">
+      <span><b>${p.nome}</b> — ${p.categoria}</span>
+      <button onclick="excluirConvidado(${index})" 
+              style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:14px;">
+        Excluir
+      </button>
+    </div>
+  `).join("");
+
   document.getElementById("total").textContent = lista.length;
 }
 
