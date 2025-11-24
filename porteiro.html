@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="PORTEIRO - EXCLUSIVE PASS">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
 <meta charset="UTF-8">
@@ -63,6 +68,15 @@
   <div id="cat"></div>
   <button onclick="fechar()">OK</button>
 </div>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registrado com sucesso'))
+      .catch(err => console.log('SW falhou:', err));
+  });
+}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
@@ -226,6 +240,7 @@ function tocarErro(){
 </script>
 </body>
 </html>
+
 
 
 
