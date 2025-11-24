@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disparo WhatsApp - EXCLUSIVE PASS</title>
+  <style>
+    body{font-family:Segoe UI;background:#0f0c29;color:#fff;text-align:center;padding:20px}
+    .box{max-width:600px;margin:30px auto;background:#16213e;padding:30px;border-radius:20px;box-shadow:0 0 40px #000}
+    #qrcode{margin:20px auto;width:280px;height:280px;background:white;padding:15px;border-radius:20px}
+    button{padding:16px 40px;font-size:20px;background:#25d366;color:#000;border:none;border-radius:15px;margin:20px;cursor:pointer;font-weight:bold}
+    .status{color:#00d4aa;font-size:18px;margin:20px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="box">
+    <h1 style="color:#25d366">DISPARO WHATSAPP</h1>
+    <p>1. Escaneie o QR Code com seu WhatsApp</p>
+    <div id="qrcode"></div>
+    <p class="status" id="status">Aguardando conexão...</p>
+    <button onclick="iniciarDisparo()" id="btn" disabled>Iniciar Disparo Automático</button>
+  </div>
+
+  <script>
+    // Cria QR Code único (atualiza a cada 15 segundos)
+    let qrCode;
+    function gerarQR() {
+      const id = Date.now();
+      const url = `https://web.whatsapp.com/?autoconnect=${id}`;
+      if (qrCode) qrCode.clear();
+      qrCode = new QRCode(document.getElementById("qrcode"), {
+        text: url,
+        width: 256,
+        height: 256,
+        colorDark: "#000",
+        colorLight: "#fff"
+      });
+      document.getElementById("status").innerHTML = "Escaneie com seu WhatsApp<br><small>Novo QR em 15s</small>";
+      setTimeout(gerarQR, 15000);
+    }
+    gerarQR();
+
+    // Simula detecção de conexão (na prática você vê no celular)
+    setTimeout(() => {
+      document.getElementById("status").innerHTML = "Conectado! Pronto para disparar";
+      document.getElementById("btn").disabled = false;
+      document.getElementById("btn").textContent = "INICIAR DISPARO";
+    }, 5000); // simula conexão rápida
+
+    async function iniciarDisparo() {
+      if (!confirm("Vou enviar para TODOS os contatos com telefone. Continuar?")) return;
+
+      const btn = document.getElementById("btn");
+      btn.disabled = true;
+      btn.textContent = "Disparando...";
+
+      // Lê os links que você copiou antes
+      let texto;
+      try { texto = await navigator.clipboard.readText(); }
+      catch { return alert("Cole os links gerados antes!"); }
+
+      const linhas = texto.trim().split('\n').filter(l => l.includes('http'));
+      let enviados = 0;
+
+      for (let linha of linhas) {
+        const nome = linha.split(" → ")[0].trim();
+        const linkCompleto = linha.split(" → ")[1].split(" (")[0];
+
+        const pessoa = listaGlobal.find(p => p.nome.toLowerCase().includes(nome.toLowerCase()));
+        if (!pessoa?.telefone) continue;
+
+        const tel = pessoa.telefone.replace(/\D/g, '');
+        const msg = encodeURIComponent(
+          `Olá *${nome.split(" ")[0]}*! Te espero na FESTA EXCLUSIVA!\n\nSeu convite VIP:\n${linkCompleto}`
+        );
+
+        window.open(`https://wa.me/55${tel}?text=${msg}`, '_blank');
+        enviados++;
+
+        document.getElementById("status").innerHTML = 
+          `Enviando... ${enviados}/${linhas.length}<br>${nome}`;
+
+        await new Promise(r => setTimeout(r, 5000)); // 5 segundos entre cada (100% seguro)
+      }
+
+      btn.textContent = "DISPARO CONCLUÍDO!";
+      document.getElementById("status").innerHTML = 
+        `SUCESSO! ${enviados} mensagens enviadas`;
+    }
+
+    // Recebe a lista do index.html (importante!)
+    window.addEventListener("message", e => {
+      if (e.data.lista) window.listaGlobal = e.data.lista;
+    });
+  </script>
+</body>
+</html>
