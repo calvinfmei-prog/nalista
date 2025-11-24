@@ -33,6 +33,9 @@
 
   <button class="gerar" onclick="gerarIndividuais()">GERAR PNG INDIVIDUAIS</button>
   <button class="zip" onclick="gerarZip()">GERAR TODOS + ZIP (RECOMENDADO)</button>
+  <button class="zip" onclick="enviarTodosWhatsApp()" style="background:#25d366;color:#fff;font-size:20px;margin-top:15px;">
+  ENVIAR TODOS POR WHATSAPP (com convite)
+  </button>
 
   <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA</button>
   <input type="file" id="file" style="display:none" accept=".json" onchange="importar(event)">
@@ -70,7 +73,107 @@ function download(blob, nome) {
     URL.revokeObjectURL(url);
   }, 300);
 }
+/*------------------------- ENVIAR TODOS ZAP -------------------------------*/
+async function enviarTodosWhatsApp() {
+  const comTelefone = lista.filter(p => p.telefone && p.telefone.replace(/\D/g, '').length >= 10);
+  if (comTelefone.length === 0) return alert("Nenhum convidado com telefone válido!");
 
+  if (!confirm(`Enviar para ${comTelefone.length} pessoas?\n\nSerá gerado um convite para cada um.\nVocê controlará o envio manualmente (próximo → cola → envia).\n\nContinuar?`)) return;
+
+  const botao = event.target;
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+
+  const convites = [];
+
+  try {
+    // === ETAPA 1: GERA TODOS OS CONVITES COM PROGRESSO ===
+    for (let i = 0; i < comTelefone.length; i++) {
+      botao.textContent = `Gerando convite ${i + 1} de ${comTelefone.length}...`;
+      
+      const canvas = await criarConvite(comTelefone[i]);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+      
+      convites.push({
+        pessoa: comTelefone[i],
+        blob
+      });
+
+      // Atualiza a cada 3 convites (evita travar o botão)
+      if (i % 3 === 2 || i === comTelefone.length - 1) {
+        await new Promise(r => setTimeout(r, 1)); // deixa o navegador respirar
+      }
+    }
+
+    botao.textContent = "Convites prontos! Abrindo janela...";
+
+    // === ETAPA 2: ABRE JANELA DE ENVIO ===
+    const win = window.open('', '_blank', 'width=560,height=780,scrollbars=yes');
+    
+    win.convitesDados = convites.map(c => ({
+      nome: c.pessoa.nome,
+      telefone: c.pessoa.telefone.replace(/\D/g, ''),
+      categoria: c.pessoa.categoria,
+      acomp: c.pessoa.acomp || ""
+    }));
+    win.convitesBlobs = convites.map(c => c.blob);
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html><head><meta charset="utf-8"><title>Envio em Massa</title>
+      <style>
+        body{font-family:Segoe UI,Arial;background:#0f0c29;color:#eee;margin:0;padding:20px;text-align:center}
+        h2{color:#25d366;font-size:30px;margin:15px}
+        .box{background:#16213e;padding:30px;border-radius:20px;max-width:500px;margin:20px auto;box-shadow:0 0 40px #000}
+        button{padding:18px 40px;font-size:22px;background:#25d366;color:#000;border:none;border-radius:15px;margin:20px;cursor:pointer;font-weight:bold}
+        #nome{font-size:32px;color:#ffd700;margin:30px 0}
+        .info{color:#00d4aa;font-size:18px}
+      </style></head>
+      <body>
+        <div class="box">
+          <h2>EXCLUSIVE PASS</h2>
+          <div class="info"><strong>${convites.length}</strong> convites carregados!</div>
+          <button id="btn">PRÓXIMO CONVIDADO</button>
+          <div id="nome">Clique para começar</div>
+        </div>
+        <script>
+          let i = 0;
+          const d = window.convitesDados || [];
+          const b = window.convitesBlobs || [];
+          document.getElementById("btn").onclick = async () => {
+            if (i >= d.length) {
+              document.body.innerHTML = "<h2 style='color:#25d366'>TODOS ENVIADOS!</h2><p>Missão cumprida!</p>";
+              return;
+            }
+            const p = d[i];
+            document.getElementById("nome").innerHTML = p.nome.split(" ")[0] + "<br><small>" + p.categoria + (p.acomp?" + "+p.acomp:"") + "</small>";
+            if (b[i] && navigator.clipboard?.write) await navigator.clipboard.write([new ClipboardItem({"image/png": b[i]})]);
+            const msg = encodeURIComponent("Olá *"+p.nome.split(" ")[0]+"*! \\n\\nFESTA EXCLUSIVA!\\nCategoria: *"+p.categoria+"*"+(p.acomp?"\\nAcompanhantes: +"+p.acomp:"")+"\\n\\nSeu convite com QR Code está anexado abaixo!\\n\\nTe vejo lá!");
+            window.open("https://wa.me/55"+p.telefone+"?text="+msg, "_blank");
+            i++;
+            document.getElementById("btn").textContent = "PRÓXIMO (" + i + "/" + d.length + ")";
+          };
+        <\/script>
+      </body></html>
+    `);
+    win.document.close();
+
+    // === FINALIZA O BOTÃO ===
+    botao.textContent = `PRONTO! ${convites.length} convites gerados`;
+    setTimeout(() => {
+      botao.textContent = textoOriginal;
+      botao.disabled = false;
+    }, 4000);
+
+    alert(`SUCESSO!\n\n${convites.length} convites gerados e janela aberta.\n\nAgora é só clicar em PRÓXIMO → Ctrl+V → Enviar → repetir`);
+
+  } catch (err) {
+    console.error(err);
+    botao.textContent = "ERRO - Tente novamente";
+    botao.disabled = false;
+    alert("Erro ao gerar convites. Tente novamente.");
+  }
+}
 /* ------------------------- CRIA CONVITE --------------------------*/
 async function criarConvite(p) {
   // 1) Constrói o SVG (como string)
@@ -177,6 +280,27 @@ function ajustarFonte(elemento, tamanhoInicial, tamanhoMinimo) {
   }
 }
 
+function enviarTodosWhats(){
+  if(!lista.length) return alert("Lista vazia!");
+
+  if(!confirm(`Isso vai abrir ${lista.length} abas do WhatsApp (uma para cada pessoa com telefone).\n\nContinuar?`)) return;
+
+  lista.forEach((p, i) => {
+    const tel = (p.telefone||"").replace(/\D/g,"");
+    if(!tel) return;
+
+    const texto = encodeURIComponent(
+      `Olá *${p.nome.split(" ")[0]}*! 🎉\n\nVocê está convidado(a) para a *FESTA EXCLUSIVA*!\nCategoria: *${p.categoria}*\n\nEm breve envio seu convite com QR Code.\nTe vejo lá! 🔥`
+    );
+
+    setTimeout(() => {
+      window.open(`https://wa.me/55${tel}?text=${texto}`, "_blank");
+    }, i * 1200); // abre uma a cada 1,2 segundos (evita bloqueio)
+  });
+
+  alert("Abas do WhatsApp sendo abertas… envie os convites quando quiser!");
+}
+
 /* ------------------------- GERAR PNG --------------------------*/
 async function gerarIndividuais() {
   if (!lista.length) return alert("Lista vazia!");
@@ -216,7 +340,55 @@ async function gerarIndividuais() {
     alert("Tentativa de download concluída (alguns podem ter sido bloqueados no PC). Use o ZIP para garantir tudo!");
   }, 1000);
 }
+/*-------------------------- ENVIAR CONVITE PELO ZAP COM IMAGEM ------------------*/
+async function enviarConviteWhats(index) {
+  const p = lista[index];
+  const botao = event.target;
+  botao.disabled = true;
+  botao.textContent = "Gerando convite...";
 
+  try {
+    // 1. Gera o convite (canvas)
+    const canvas = await criarConvite(p);
+
+    // 2. Converte para Blob (necessário pro clipboard)
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+
+    // 3. Copia a imagem para a área de transferência
+    if (navigator.clipboard && navigator.clipboard.write) {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+    }
+
+    // 4. Mensagem personalizada
+    const mensagem = encodeURIComponent(
+      `Olá *${p.nome.split(" ")[0]}*! 🎉\n\nVocê está convidado(a) para a *FESTA EXCLUSIVA*!\n\nCategoria: *${p.categoria}*${p.acomp ? `\nAcompanhantes: +${p.acomp}` : ""}\n\nSeu convite individual com QR Code está anexado abaixo.\n\nTe vejo lá! 🔥`
+    );
+
+    // 5. Abre o WhatsApp
+    const url = `https://wa.me/55${p.telefone.replace(/\D/g, '')}?text=${mensagem}`;
+    window.open(url, '_blank');
+
+    // 6. Feedback perfeito pro usuário
+    setTimeout(() => {
+      botao.disabled = false;
+      botao.textContent = "WhatsApp + Convite";
+
+      if (/Android|iPhone|iPad|Mobi/.test(navigator.userAgent)) {
+        alert(`Imagem copiada!\n\nNo WhatsApp que acabou de abrir:\nToque no campo de mensagem → Cole (ou toque no + → Galeria)\n\nConvite já está na sua área de transferência!`);
+      } else {
+        alert(`WhatsApp Web aberto!\n\nAgora é só dar CTRL + V (ou clique com botão direito → Colar)\n\nA imagem do convite já está copiada!`);
+      }
+    }, 1500);
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao gerar o convite. Tente novamente.");
+    botao.disabled = false;
+    botao.textContent = "WhatsApp + Convite";
+  }
+}
 /* ------------------------- GERAR ZIP --------------------------*/
 async function gerarZip() {
   if (!lista.length) return alert("Lista vazia!");
@@ -316,15 +488,27 @@ function excluirConvidado(index){
 
 function atualiza(){
   const l = document.getElementById("lista");
-  l.innerHTML = lista.map((p, index) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#1a1a5e; padding:16px; margin:10px 0; border-radius:12px; font-size:18px;">
-      <span><b>${p.nome}</b> — ${p.categoria}</span>
-      <button onclick="excluirConvidado(${index})" 
-              style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:14px;">
-        Excluir
-      </button>
-    </div>
-  `).join("");
+  l.innerHTML = lista.map((p, index) => {
+    const telefone = (p.telefone || "").replace(/\D/g, "");
+    const temWhats = telefone.length >= 10;
+
+    return `
+      <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; background:#1a1a5e; padding:16px; margin:10px 0; border-radius:12px; font-size:18px;">
+        <div>
+          <b>${p.nome}</b> — ${p.categoria}
+          ${temWhats ? `<small style="color:#25d366">(${telefone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")})</small>` : ""}
+        </div>
+        <div style="display:flex; gap:8px;">
+          ${temWhats ? `<button onclick="enviarConviteWhats(${index})" style="background:#25d366; color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px;">
+            WhatsApp + Convite
+          </button>` : ""}
+          <button onclick="excluirConvidado(${index})" style="background:#e74c3c; color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px;">
+            Excluir
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
 
   document.getElementById("total").textContent = lista.length;
 }
