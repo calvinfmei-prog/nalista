@@ -64,50 +64,108 @@ function download(blob, nome) {
 
 /* ------------------------- CRIA CONVITE --------------------------*/
 async function criarConvite(p) {
+  // 1) Constrói o SVG (como string)
   const svg = `
-  <svg xmlns='http://www.w3.org/2000/svg' width='600' height='1066'>
-    <g stroke='#d4af37' fill='none'>
-      <line x1='-120' y1='100' x2='700' y2='-50' stroke-width='6' opacity='.60'/>
+  <svg xmlns='http://www.w3.org/2000/svg' width='600' height='1066' viewBox='0 0 600 1066' preserveAspectRatio='none'>
+    <g fill='none' stroke='#d4af37' stroke-linecap='round'>
+      <line x1='-120' y1='100' x2='700' y2='-50' stroke-width='6' opacity='0.60' />
+      <line x1='650' y1='400' x2='-100' y2='-50' stroke-width='5' opacity='0.50' />
+      <line x1='-150' y1='800' x2='700' y2='250' stroke-width='5' opacity='0.55' />
+      <line x1='0' y1='1100' x2='700' y2='450' stroke-width='6' opacity='0.65' />
+      <!-- pequenos traços para dar variação -->
+      <line x1='400' y1='20' x2='580' y2='120' stroke-width='2' opacity='0.35' />
+      <line x1='20' y1='900' x2='260' y2='700' stroke-width='2.5' opacity='0.35' />
     </g>
-  </svg>`;
+  </svg>`.trim();
 
+  // 2) codifica para base64 (seguro para data-url)
   const svgBase64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 
+  // 3) cria o container do convite e aplica o background SVG como background-image
   const div = document.createElement("div");
   div.style.cssText = `
-    width:600px;height:1066px;background:#212B37;
-    background-image:url("${svgBase64}");background-size:cover;
-    position:absolute;left:-9999px;top:0;display:flex;flex-direction:column;
-    padding:80px 50px 60px;border-radius:50px;gap:40px;
-    font-family:'Cinzel',serif;
+    width:600px;height:1066px;
+    background:#212B37;
+    background-image: url("${svgBase64}");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius:50px;overflow:hidden;
+    position:absolute;left:-9999px;top:0;
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:flex-start;padding:80px 50px 60px;
+    box-sizing:border-box;font-family:'Cinzel',serif;
+    gap:40px;
   `;
 
-  const primeiroNome = (p.nome||'').split(" ")[0].toUpperCase();
+  // primeiro nome
+  const primeiroNome = (p.nome||'').trim().split(" ")[0].toUpperCase();
 
+  // 4) conteúdo do convite (todo com z-index alto para ficar SOBRE o background)
   div.innerHTML = `
-    <div style="background:#1a1a2e;color:white;font-size:34px;padding:22px 90px;border-radius:50px;">
-      FESTA EXCLUSIVA
-    </div>
-    <p style="color:#a0e7ff;font-size:36px;margin:0;">Você está convidado(a)!</p>
-    <h1 style="font-size:52px;color:white;margin:0;">${primeiroNome}</h1>
+    <div style="z-index:2;background:#1a1a2e;color:#FFFFFF; font-size:34px;font-weight:bold; padding:22px 90px;border-radius:50px;">FESTA EXCLUSIVA</div>
 
-    <div style="background:#1a1a2e;color:white;font-size:56px;padding:35px 140px;border-radius:70px;">
-      ${p.categoria}
-    </div>
+    <p style="z-index:2;color:#a0e7ff;font-size:36px;margin:0;">Você está convidado(a)!</p>
 
-    <div id="qr-${p.id}" style="width:420px;height:420px;background:white;padding:30px;border-radius:45px;"></div>
+    <h1 style="z-index:2;font-size:52px;font-weight:bold;color:#FFFFFF;text-shadow:0 8px 30px rgba(0,0,0,0.8);margin:0;">${primeiroNome}</h1>
+
+    <div style="z-index:2;background:#1a1a2e;color:white;font-size:56px;font-weight:bold;padding:35px 140px;border-radius:70px;">${p.categoria}</div>
+
+    <div id="qr-${p.id}" style="
+      z-index:3;
+      width:420px;height:420px;
+      background:white;padding:30px;
+      border-radius:45px;
+      box-shadow:0 25px 60px rgba(0,0,0,0.8);
+      display:flex;justify-content:center;align-items:center;
+    "></div>
+
+    <p style="z-index:2;color:#ccc;font-size:24px;margin:30px 0 0;line-height:1.4;text-align:center;">
+      Código válido para entrada única<br>Validação 100% offline
+    </p>
   `;
 
+  // append temporário para renderização do QR
   document.body.appendChild(div);
 
-  new QRCode(document.getElementById(`qr-${p.id}`), {
-    text: p.id, width:360, height:360, correctLevel: QRCode.CorrectLevel.H
+  // 5) gerar QR code (vai dentro do #qr-...)
+  new QRCode(div.querySelector(`#qr-${p.id}`), {
+    text: p.id,
+    width: 360,
+    height: 360,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
   });
 
-  await new Promise(r => setTimeout(r, 900));
-  const canvas = await html2canvas(div, {scale:3});
+  // 6) aguardar um pequeno tempo para garantir renderização do QR (pode ajustar)
+  await new Promise(r => setTimeout(r, 1100));
+
+  // 7) captura por html2canvas - background via data URL será renderizado SOB o conteúdo
+  const canvas = await html2canvas(div, {
+    scale: 3,
+    backgroundColor: null,
+    logging: false,
+    allowTaint: true,
+    useCORS: true
+  });
+
+  // limpa DOM e retorna canvas
   document.body.removeChild(div);
   return canvas;
+}
+
+  /* Ajuste de fonte automática (mantive caso queira usar) */
+function ajustarFonte(elemento, tamanhoInicial, tamanhoMinimo) {
+  let size = tamanhoInicial;
+  while (
+    elemento.scrollHeight > elemento.clientHeight + 10 ||
+    elemento.scrollWidth > elemento.clientWidth
+  ) {
+    if (size <= tamanhoMinimo) break;
+    size -= 4;
+    elemento.style.fontSize = size + "px";
+  }
 }
 
 /* ------------------------- GERAR PNG --------------------------*/
@@ -198,4 +256,5 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
 
