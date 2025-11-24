@@ -328,7 +328,7 @@ async function gerarEPublicarConvites() {
       const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 0.95));
 
       // Gera senha curta
-      const senha = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const senha = Math.random().toString(36).substring(2, 12).toUpperCase();
 
       // Converte para base64
       const base64 = await new Promise(resolve => {
