@@ -35,6 +35,9 @@
   <button class="gerar" onclick="gerarEPublicarConvites()">
   GERAR + PUBLICAR CONVITES ONLINE (RECOMENDADO 2025)
     </button>
+  <button class="zip" onclick="disparoMassaWhatsApp()" style="background:#25d366;color:#fff;font-size:20px;margin-top:15px;">
+  DISPARO EM MASSA NO WHATSAPP (abre todas as conversas)
+  </button>
   <button class="zip" onclick="gerarZip()">GERAR TODOS + ZIP (RECOMENDADO)</button>
   <button class="zip" onclick="enviarTodosWhatsApp()" style="background:#25d366;color:#fff;font-size:20px;margin-top:15px;">
   ENVIAR TODOS POR WHATSAPP (com convite)
@@ -559,6 +562,32 @@ function limparTudo(){
     lista=[]; salvar(); atualiza();
   }
 }
+function disparoMassaWhatsApp() {
+  // Pega o texto que já foi copiado na área de transferência
+  navigator.clipboard.readText().then(textoCopiado => {
+    if (!textoCopiado.includes("https://calvinfmei-prog.github.io")) {
+      return alert("Primeiro gere e publique os convites para copiar os links!");
+    }
+
+    if (!confirm(`Vou abrir ${textoCopiado.split('\n').filter(l=>l.trim()).length} conversas no WhatsApp.\n\nContinuar?`)) return;
+
+    const linhas = textoCopiado.trim().split('\n');
+    linhas.forEach((linha, i) => {
+      const nome = linha.split(" → ")[0].trim();
+      const telefoneMatch = lista.find(p => p.nome.toLowerCase().includes(nome.toLowerCase()))?.telefone;
+
+      if (telefoneMatch) {
+        const tel = telefoneMatch.replace(/\D/g, '');
+        const linkCompleto = linha.split(" → ")[1].split(" (")[0];
+        setTimeout(() => {
+          window.open(`https://wa.me/55${tel}?text=Olá%20*${nome.split(" ")[0]}*!%20Aqui%20está%20seu%20convite%20exclusivo:%20${encodeURIComponent(linkCompleto)}`, '_blank');
+        }, i * 2000); // abre uma a cada 2 segundos (evita bloqueio)
+      }
+    });
+
+    alert("Disparo iniciado! As conversas estão abrindo automaticamente.\n\nQuando abrir, é só dar Enter pra enviar.");
+  });
+}  
 </script>
 </body>
 </html>
