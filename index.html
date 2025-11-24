@@ -145,16 +145,41 @@ function importar(e){
   if(!file) return;
 
   const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      lista = JSON.parse(ev.target.result);
-      salvar(); atualiza();
-    } catch {
-      alert("Arquivo inválido!");
+  reader.onload = function(ev){
+    const textoCripto = ev.target.result.trim();
+
+    // FRASE SECRETA — TEM QUE SER A MESMA DO CONVERSOR
+    const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRlIDI1MTI";
+
+    // Gera a chave e IV iguais aos do conversor
+    const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+    const iv = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
+
+    try{
+      const bytes = CryptoJS.AES.decrypt(textoCripto, chave, {
+        iv: CryptoJS.enc.Utf8.parse(iv),
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+
+      const jsonPuro = bytes.toString(CryptoJS.enc.Utf8);
+      if(!jsonPuro || !jsonPuro.startsWith('[')) throw "inválido";
+
+      lista = JSON.parse(jsonPuro);
+      salvar();
+      atualiza();
+
+      alert("Lista importada com sucesso!");
+
+    }catch(err){
+      console.error("Erro ao decodificar lista:", err);
+      alert("Arquivo inválido! Use apenas arquivos gerados pelo conversor.");
     }
   };
+
   reader.readAsText(file);
 }
+
 
 /* ------------------------- OUTROS --------------------------*/
 function salvar(){ localStorage.setItem("n", JSON.stringify(lista)); }
@@ -173,3 +198,4 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
