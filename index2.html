@@ -354,7 +354,7 @@ async function gerarEPublicarConvites() {
 
       const resultado = await response.json();
       const id = resultado.name; // ID gerado pelo Firebase
-      const link = `https://calvinfmei-prog.github.io/nalista1/convite.html?id=${id}&s=${senha}`;
+      const link = `https://calvinfmei-prog.github.io/nalista/convite.html?id=${id}&s=${senha}`;
 
       convitesPublicados.push({ pessoa: p, link, senha });
     }
