@@ -31,7 +31,9 @@
 <div class="box">
   <h1>EXCLUSIVE PASS</h1>
 
-  <button class="gerar" onclick="gerarIndividuais()">GERAR PNG INDIVIDUAIS</button>
+  <button class="gerar" onclick="gerarEPublicarConvites()">
+  GERAR + PUBLICAR CONVITES ONLINE (RECOMENDADO 2025)
+    </button>
   <button class="zip" onclick="gerarZip()">GERAR TODOS + ZIP (RECOMENDADO)</button>
   <button class="zip" onclick="enviarTodosWhatsApp()" style="background:#25d366;color:#fff;font-size:20px;margin-top:15px;">
   ENVIAR TODOS POR WHATSAPP (com convite)
@@ -302,43 +304,77 @@ function enviarTodosWhats(){
 }
 
 /* ------------------------- GERAR PNG --------------------------*/
-async function gerarIndividuais() {
+async function gerarEPublicarConvites() {
   if (!lista.length) return alert("Lista vazia!");
-  if (lista.length > 15) {
-    if (!confirm(`Você tem ${lista.length} convidados. No PC, baixar muitos PNGs de uma vez pode ser bloqueado pelo navegador.\n\nRecomendo usar o ZIP. Deseja continuar mesmo assim?`)) {
-      return;
-    }
-  }
 
   const botao = event.target;
+  const textoOriginal = botao.textContent;
   botao.disabled = true;
-  botao.textContent = "GERANDO PNGS...";
+  botao.textContent = "Gerando e publicando...";
 
-  let contador = 0;
-  for (let p of lista) {
-    try {
-      contador++;
-      botao.textContent = `BAIXANDO ${contador}/${lista.length}...`;
+  const convitesPublicados = [];
+
+  try {
+    for (let i = 0; i < lista.length; i++) {
+      const p = lista[i];
+      botao.textContent = `Publicando ${i + 1}/${lista.length}: ${p.nome.split(" ")[0]}...`;
+
+      // Gera o convite
       const canvas = await criarConvite(p);
-      canvas.toBlob(blob => {
-        if (blob) {
-          const nome = `${p.nome.trim().split(" ")[0]}_${p.categoria.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
-          download(blob, nome);
-        }
-      }, 'image/png', 0.95);
-      
-      // Pequena pausa entre downloads para o Chrome não bloquear
-      await new Promise(r => setTimeout(r, 300));
-    } catch (e) {
-      console.error("Erro no convite:", p.nome, e);
-    }
-  }
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 0.95));
 
-  setTimeout(() => {
+      // Gera senha curta e única (4 letras/números)
+      const senha = Math.random().toString(36).substring(2, 6).toUpperCase();
+
+      // Converte para base64 para enviar
+      const base64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
+
+      // Envia para o servidor (usando GitHub + Firebase grátis)
+      const response = await fetch('https://convites-calvin-default-rtdb.firebaseio.com/convites.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: p.nome,
+          categoria: p.categoria,
+          senha: senha,
+          imagem: base64,
+          data: new Date().toISOString().split('T')[0],
+          usado: false
+        })
+      });
+
+      if (response.ok) {
+        const id = (await response.json()).name;
+        const link = `https://calvinfmei-prog.github.io/convite/?id=${id}&s=${senha}`;
+        convitesPublicados.push({ pessoa: p, link, senha });
+      }
+    }
+
+    // Copia todos os links com senha para área de transferência
+    const textoParaEnviar = convitesPublicados
+      .map(c => `${c.pessoa.nome.split(" ")[0]} → ${c.link} (senha: ${c.senha})`)
+      .join("\n");
+
+    await navigator.clipboard.writeText(textoParaEnviar);
+
+    botao.textContent = `PRONTO! ${convitesPublicados.length} convites publicados`;
+    alert(`SUCESSO TOTAL!\n\n${convitesPublicados.length} convites publicados online.\n\nTodos os links + senhas foram copiados!\n\nAgora é só colar no WhatsApp e enviar em massa.`);
+
+    setTimeout(() => {
+      botao.textContent = textoOriginal;
+      botao.disabled = false;
+    }, 5000);
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao publicar. Verifique sua conexão.");
     botao.disabled = false;
-    botao.textContent = "GERAR PNG INDIVIDUAIS";
-    alert("Tentativa de download concluída (alguns podem ter sido bloqueados no PC). Use o ZIP para garantir tudo!");
-  }, 1000);
+    botao.textContent = textoOriginal;
+  }
 }
 /*-------------------------- ENVIAR CONVITE PELO ZAP COM IMAGEM ------------------*/
 async function enviarConviteWhats(index) {
