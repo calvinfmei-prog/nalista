@@ -55,11 +55,20 @@ atualiza();
 /* ------------------------- DOWNLOAD --------------------------*/
 function download(blob, nome) {
   const url = URL.createObjectURL(blob);
+
+  // Força download sem criar aba nova
   const a = document.createElement("a");
-  a.href = url; a.download = nome;
+  a.style.display = "none";
+  a.href = url;
+  a.download = nome;
+
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
+
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 300);
 }
 
 /* ------------------------- CRIA CONVITE --------------------------*/
@@ -174,7 +183,13 @@ async function gerarIndividuais() {
 
   for (let p of lista) {
     const canvas = await criarConvite(p);
-    canvas.toBlob(b => download(b, `${p.nome.split(" ")[0]}_${p.categoria}.png`));
+
+    await new Promise(res => {
+      canvas.toBlob(b => {
+        download(b, `${p.nome.split(" ")[0]}_${p.categoria}.png`);
+        setTimeout(res, 300); // dá tempo entre downloads
+      });
+    });
   }
 
   alert("PNG gerados!");
@@ -256,3 +271,4 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
