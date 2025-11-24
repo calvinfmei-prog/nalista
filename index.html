@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
   <link rel="manifest" href="manifest.json">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="EXCLUSIVE PASS">
@@ -48,16 +47,6 @@
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('SW registrado com sucesso'))
-      .catch(err => console.log('SW falhou:', err));
-  });
-}
-</script>
 
 <script>
 let lista = JSON.parse(localStorage.getItem("n")||"[]");
@@ -185,8 +174,7 @@ async function gerarIndividuais() {
 
   for (let p of lista) {
     const canvas = await criarConvite(p);
-    const dataURL = canvas.toDataURL("image/png");
-    window.open(dataURL, "_blank");
+    canvas.toBlob(b => download(b, `${p.nome.split(" ")[0]}_${p.categoria}.png`));
   }
 
   alert("PNG gerados!");
@@ -204,11 +192,9 @@ async function gerarZip() {
     const blob = await new Promise(res => canvas.toBlob(res));
     pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.png`, blob);
   }
-  const blob = await zip.generateAsync({type:"blob"});
-  zip.generateAsync({ type: "base64" }).then(base64 => {
-  const url = "data:application/zip;base64," + base64;
-  window.open(url, "_blank");
-});
+
+  const zipBlob = await zip.generateAsync({type:"blob"});
+  download(zipBlob, `EXCLUSIVE_PASS_${lista.length}.zip`);
 }
 
 /* ------------------------- IMPORTAR --------------------------*/
@@ -270,6 +256,3 @@ function limparTudo(){
 </script>
 </body>
 </html>
-
-
-
