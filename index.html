@@ -267,26 +267,43 @@ function limparTudo(){
   }
 }
 
-function exportar(){
-  const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRkIDI1MTI";
-  
-  const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
-  const iv    = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
+function importar(e){
+  const file = e.target.files[0];
+  if(!file) return;
 
-  // 1) Transforma em JSON puro
-  const json = JSON.stringify(lista);
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const textoCripto = ev.target.result.trim();
 
-  // 2) Criptografa exatamente como o porteiro espera
-  const encrypted = CryptoJS.AES.encrypt(json, chave, {
-    iv: CryptoJS.enc.Utf8.parse(iv),
-    mode: CryptoJS.mode.CBC,
-    padding: CryptoJS.pad.Pkcs7
-  }).toString();
+    const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRkIDI1MTI";
 
-  // 3) Salva arquivo .json ENCRIPTADO
-  const blob = new Blob([encrypted], {type:"text/plain"});
-  download(blob, "lista_convidados_encriptada.json");
+    const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+    const iv    = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
+
+    try{
+
+      const bytes = CryptoJS.AES.decrypt(textoCripto, chave, {
+        iv: CryptoJS.enc.Utf8.parse(iv),
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+
+      const jsonPuro = bytes.toString(CryptoJS.enc.Utf8);
+      if(!jsonPuro || !jsonPuro.startsWith('[')) throw "inválido";
+
+      lista = JSON.parse(jsonPuro);
+      salvar();
+      atualiza();
+
+    }catch(err){
+      console.error(err);
+      alert("Lista inválida ou corrompida!");
+    }
+  };
+
+  reader.readAsText(file);
 }
+
 
 
 
@@ -325,6 +342,7 @@ function importar(e){
 </script>
 </body>
 </html>
+
 
 
 
