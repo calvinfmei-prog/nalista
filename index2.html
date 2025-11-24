@@ -36,9 +36,7 @@
   <button class="zip" onclick="enviarTodosWhatsApp()" style="background:#25d366;color:#fff;font-size:20px;margin-top:15px;">
   ENVIAR TODOS POR WHATSAPP (com convite)
   </button>
-  <button class="gerar" onclick="disparoMagico()" style="background:#9b03;color:#fff;font-size:20px;margin-top:15px;padding:18px;">
-  DISPARO MÁGICO NATIVO (iOS + Android) ← RECOMENDADO
-  </button>
+
   <button class="imp" onclick="document.getElementById('file').click()">IMPORTAR LISTA</button>
   <input type="file" id="file" style="display:none" accept=".json" onchange="importar(event)">
 
@@ -75,196 +73,106 @@ function download(blob, nome) {
     URL.revokeObjectURL(url);
   }, 300);
 }
-/*------------------------- tentativa automação -----------------------------*/
-async function disparoMagico() {
-  const comTelefone = lista.filter(p => p.telefone && p.telefone.replace(/\D/g,'').length >= 10);
-  if (comTelefone.length === 0) return alert("Nenhum telefone na lista!");
-
-  if (!confirm(`DISPARO MÁGICO NATIVO\n\nVai gerar um link que funciona no celular (iOS e Android)\n\nVocê envia 200 convites em ~3 minutos sem app extra!\n\nContinuar?`)) return;
-
-  const botao = event.target;
-  botao.disabled = true;
-  botao.textContent = "GERANDO CONVITES...";
-
-  const convites = [];
-
-  for (let i = 0; i < comTelefone.length; i++) {
-    botao.textContent = `Gerando convite ${i + 1}/${comTelefone.length}...`;
-    const p = comTelefone[i];
-    const canvas = await criarConvite(p);
-    const base64 = canvas.toDataURL("image/png");
-
-    const mensagem = encodeURIComponent(
-      `Olá *${p.nome.split(" ")[0]}*! \n\nVocê está convidado(a) para a *FESTA EXCLUSIVA*!\nCategoria: *${p.categoria}*${p.acomp ? `\nAcompanhantes: +${p.acomp}` : ""}\n\nSeu convite individual com QR Code está abaixo.\n\nTe vejo lá!`
-    );
-
-    convites.push({
-      telefone: p.telefone.replace(/\D/g,''),
-      texto: mensagem,
-      imagem: base64
-    });
-  }
-
-  // Gera o HTML com o disparo mágico
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DISPARO MÁGICO</title>
-  <style>
-    body{font-family: -apple-system, BlinkMacSystemFont, sans-serif;background:#0f0c29;color:white;text-align:center;padding:20px}
-    h1{color:#25d366;font-size:28px}
-    button{background:#25d366;color:black;padding:20px 40px;font-size:24px;border:none;border-radius:20px;margin:20px auto;display:block;width:90%;font-weight:bold}
-    .info{background:#16213e;padding:20px;border-radius:20px;margin:20px}
-    .contador{font-size:60px;font-weight:bold;color:#ffd700;margin:30px}
-  </style>
-</head>
-<body>
-  <h1>DISPARO MÁGICO</h1>
-  <div class="info">
-    <p>${convites.length} convites prontos!</p>
-    <p><strong>Clique no botão → Envia → Volta → Clica de novo</strong></p>
-    <p>iOS e Android • Sem app extra</p>
-  </div>
-  <div class="contador" id="contador">0 / ${convites.length}</div>
-  <button id="btn">ENVIAR PRÓXIMO</button>
-
-  <script>
-    let i = 0;
-    const lista = ${JSON.stringify(convites)};
-    
-    document.getElementById("btn").onclick = () => {
-      if (i >= lista.length) {
-        document.body.innerHTML = "<h1 style='color:#25d366'>TODOS ENVIADOS!</h1>";
-        return;
-      }
-      
-      const item = lista[i];
-      const url = "whatsapp://send?phone=55"+item.telefone+"&text="+item.texto+"&attachment="+item.imagem;
-      
-      // Tenta abrir WhatsApp nativo com imagem (funciona no iOS!)
-      location.href = url;
-      
-      // Fallback para web (Android)
-      setTimeout(() => {
-        if (document.hasFocus()) {
-          window.open("https://wa.me/55"+item.telefone+"?text="+item.texto, "_blank");
-        }
-      }, 1000);
-
-      i++;
-      document.getElementById("contador").textContent = i + " / " + lista.length;
-      document.getElementById("btn").textContent = "ENVIAR PRÓXIMO (" + i + ")";
-    };
-  <\/script>
-</body>
-</html>`;
-
-  const blob = new Blob([html], {type: "text/html"});
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-
-  botao.disabled = false;
-  botao.textContent = "DISPARO MÁGICO NATIVO (iOS + Android)";
-
-  alert(`PRONTO!\n\nAbra o link no CELULAR\n\nToque no botão verde → Envia → Volta → Toque de novo\n\n200 envios em menos de 4 minutos\n\nFUNCIONA NO IPHONE E ANDROID`);
-}
-
-
 /*------------------------- ENVIAR TODOS ZAP -------------------------------*/
 async function enviarTodosWhatsApp() {
   const comTelefone = lista.filter(p => p.telefone && p.telefone.replace(/\D/g, '').length >= 10);
   if (comTelefone.length === 0) return alert("Nenhum convidado com telefone válido!");
 
-  if (!confirm(`Enviar para ${comTelefone.length} pessoas?\n\nVai abrir uma janela onde você controla tudo.\n\nClica → Cola → Envia → Próximo\n\nContinuar?`)) return;
+  if (!confirm(`Enviar para ${comTelefone.length} pessoas?\n\nSerá gerado um convite para cada um.\nVocê controlará o envio manualmente (próximo → cola → envia).\n\nContinuar?`)) return;
 
-  // === GERA TODOS OS CONVITES PRIMEIRO ===
+  const botao = event.target;
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+
   const convites = [];
-  for (let p of comTelefone) {
-    const canvas = await criarConvite(p);
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
-    convites.push({ pessoa: p, blob });
-  }
 
-  // === ABRE A JANELA DE CONTROLE ===
-  const win = window.open('', '_blank', 'width=560,height=780');
-  
-  // === Passa os dados ANTES de escrever o HTML (o segredo!) ===
-  win.convitesDados = convites.map(c => ({
-    nome: c.pessoa.nome,
-    telefone: c.pessoa.telefone.replace(/\D/g, ''),
-    categoria: c.pessoa.categoria,
-    acomp: c.pessoa.acomp || ""
-  }));
-  win.convitesBlobs = convites.map(c => c.blob);
+  try {
+    // === ETAPA 1: GERA TODOS OS CONVITES COM PROGRESSO ===
+    for (let i = 0; i < comTelefone.length; i++) {
+      botao.textContent = `Gerando convite ${i + 1} de ${comTelefone.length}...`;
+      
+      const canvas = await criarConvite(comTelefone[i]);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+      
+      convites.push({
+        pessoa: comTelefone[i],
+        blob
+      });
 
-  // === Agora escreve o HTML ===
-  win.document.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Envio em Massa - EXCLUSIVE PASS</title>
-        <style>
-          body{font-family:Segoe UI,Arial,sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px;text-align:center}
-          h2{color:#25d366;font-size:28px;margin:15px}
-          button{padding:16px 40px;font-size:22px;background:#25d366;color:#000;border:none;border-radius:15px;margin:20px;cursor:pointer;font-weight:bold}
-          .box{background:#16213e;padding:25px;border-radius:20px;box-shadow:0 0 30px #000}
-          #nome{font-size:28px;color:#ffd700;margin:30px 0;font-weight:bold}
-          .info{color:#00d4aa;margin:15px 0}
-        </style>
-      </head>
+      // Atualiza a cada 3 convites (evita travar o botão)
+      if (i % 3 === 2 || i === comTelefone.length - 1) {
+        await new Promise(r => setTimeout(r, 1)); // deixa o navegador respirar
+      }
+    }
+
+    botao.textContent = "Convites prontos! Abrindo janela...";
+
+    // === ETAPA 2: ABRE JANELA DE ENVIO ===
+    const win = window.open('', '_blank', 'width=560,height=780,scrollbars=yes');
+    
+    win.convitesDados = convites.map(c => ({
+      nome: c.pessoa.nome,
+      telefone: c.pessoa.telefone.replace(/\D/g, ''),
+      categoria: c.pessoa.categoria,
+      acomp: c.pessoa.acomp || ""
+    }));
+    win.convitesBlobs = convites.map(c => c.blob);
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html><head><meta charset="utf-8"><title>Envio em Massa</title>
+      <style>
+        body{font-family:Segoe UI,Arial;background:#0f0c29;color:#eee;margin:0;padding:20px;text-align:center}
+        h2{color:#25d366;font-size:30px;margin:15px}
+        .box{background:#16213e;padding:30px;border-radius:20px;max-width:500px;margin:20px auto;box-shadow:0 0 40px #000}
+        button{padding:18px 40px;font-size:22px;background:#25d366;color:#000;border:none;border-radius:15px;margin:20px;cursor:pointer;font-weight:bold}
+        #nome{font-size:32px;color:#ffd700;margin:30px 0}
+        .info{color:#00d4aa;font-size:18px}
+      </style></head>
       <body>
         <div class="box">
           <h2>EXCLUSIVE PASS</h2>
-          <div class="info">
-            <p><strong>${convites.length}</strong> convites prontos!</p>
-            <p>Clique em <strong>PRÓXIMO</strong> → cole (Ctrl+V) no WhatsApp → envie → volte aqui</p>
-          </div>
+          <div class="info"><strong>${convites.length}</strong> convites carregados!</div>
           <button id="btn">PRÓXIMO CONVIDADO</button>
           <div id="nome">Clique para começar</div>
         </div>
-
         <script>
-          let index = 0;
-          const dados = window.convitesDados || [];
-          const blobs = window.convitesBlobs || [];
-
+          let i = 0;
+          const d = window.convitesDados || [];
+          const b = window.convitesBlobs || [];
           document.getElementById("btn").onclick = async () => {
-            if (index >= dados.length) {
+            if (i >= d.length) {
               document.body.innerHTML = "<h2 style='color:#25d366'>TODOS ENVIADOS!</h2><p>Missão cumprida!</p>";
               return;
             }
-
-            const p = dados[index];
-            document.getElementById("nome").innerHTML = 
-              p.nome.split(" ")[0] + "<br><small>" + p.categoria + (p.acomp ? " + " + p.acomp : "") + "</small>";
-
-            // Copia a imagem correta
-            if (blobs[index] && navigator.clipboard?.write) {
-              try {
-                await navigator.clipboard.write([new ClipboardItem({"image/png": blobs[index]})]);
-              } catch(e) {}
-            }
-
-            // Abre WhatsApp
-            const msg = encodeURIComponent(
-              "Olá *"+p.nome.split(" ")[0]+"*! \\n\\nFESTA EX255USIVA!\\nCategoria: *"+p.categoria+"*"+(p.acomp?"\\nAcompanhantes: +"+p.acomp:"")+"\\n\\nSeu convite com QR Code está anexado abaixo!\\n\\nTe vejo lá!"
-            );
+            const p = d[i];
+            document.getElementById("nome").innerHTML = p.nome.split(" ")[0] + "<br><small>" + p.categoria + (p.acomp?" + "+p.acomp:"") + "</small>";
+            if (b[i] && navigator.clipboard?.write) await navigator.clipboard.write([new ClipboardItem({"image/png": b[i]})]);
+            const msg = encodeURIComponent("Olá *"+p.nome.split(" ")[0]+"*! \\n\\nFESTA EXCLUSIVA!\\nCategoria: *"+p.categoria+"*"+(p.acomp?"\\nAcompanhantes: +"+p.acomp:"")+"\\n\\nSeu convite com QR Code está anexado abaixo!\\n\\nTe vejo lá!");
             window.open("https://wa.me/55"+p.telefone+"?text="+msg, "_blank");
-
-            index++;
-            document.getElementById("btn").textContent = "PRÓXIMO (" + index + "/" + dados.length + ")";
+            i++;
+            document.getElementById("btn").textContent = "PRÓXIMO (" + i + "/" + d.length + ")";
           };
         <\/script>
-      </body>
-    </html>
-  `);
-  win.document.close();
+      </body></html>
+    `);
+    win.document.close();
 
-  alert("Janela aberta!\n\nAgora é só:\n1. Clicar em PRÓXIMO\n2. Dar Ctrl+V no WhatsApp\n3. Enviar\n4. Voltar e repetir até o final");
+    // === FINALIZA O BOTÃO ===
+    botao.textContent = `PRONTO! ${convites.length} convites gerados`;
+    setTimeout(() => {
+      botao.textContent = textoOriginal;
+      botao.disabled = false;
+    }, 4000);
+
+    alert(`SUCESSO!\n\n${convites.length} convites gerados e janela aberta.\n\nAgora é só clicar em PRÓXIMO → Ctrl+V → Enviar → repetir`);
+
+  } catch (err) {
+    console.error(err);
+    botao.textContent = "ERRO - Tente novamente";
+    botao.disabled = false;
+    alert("Erro ao gerar convites. Tente novamente.");
+  }
 }
 /* ------------------------- CRIA CONVITE --------------------------*/
 async function criarConvite(p) {
