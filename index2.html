@@ -334,8 +334,8 @@ async function gerarEPublicarConvites() {
         reader.readAsDataURL(blob);
       });
 /*-------------AQUI---------------*/
-      // Envia para o servidor (usando GitHub + Firebase grátis)
-      const response = await fetch('https://nalista-c58f2-default-rtdb.firebaseio.com/', {
+      // Envia para o Firebase (URL CORRETA!)
+      const response = await fetch('https://nalista-c58f2-default-rtdb.firebaseio.com/convites.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -347,13 +347,15 @@ async function gerarEPublicarConvites() {
           usado: false
         })
       });
+      
+      if (!response.ok) {
+        throw new Error(`Erro Firebase: ${response.status}`);
+}
 
-      if (response.ok) {
-        const id = (await response.json()).name;
-        const link = `https://calvinfmei-prog.github.io/convite/?id=${id}&s=${senha}`;
-        convitesPublicados.push({ pessoa: p, link, senha });
-      }
-    }
+const resultado = await response.json();
+const id = resultado.name; // ← esse é o ID único gerado pelo Firebase
+const link = `https://calvinfmei-prog.github.io/nalista1/convite.html?id=${id}&s=${senha}`;
+convitesPublicados.push({ pessoa: p, link, senha });
 
     // Copia todos os links com senha para área de transferência
     const textoParaEnviar = convitesPublicados
