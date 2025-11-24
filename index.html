@@ -246,12 +246,6 @@ function atualiza(){
   const l = document.getElementById("lista");
   l.innerHTML = lista.map(p=>`<div><b>${p.nome}</b> — ${p.categoria}</div>`).join("");
   document.getElementById("total").textContent = lista.length;
-  
-  lista.forEach((x,i)=>{ 
-    l.innerHTML += `
-      <div><span><b>${x.nome}</b> — ${x.categoria}</span>
-      <button class="excluir" onclick="excluir(${i})">Excluir</button></div>`;
-  }
 }
 
 function limparTudo(){
@@ -262,6 +256,7 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
 
 
 
