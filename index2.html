@@ -334,7 +334,7 @@ async function gerarEPublicarConvites() {
       });
 
       // Envia para o servidor (usando GitHub + Firebase grátis)
-      const response = await fetch('https://convites-calvin-default-rtdb.firebaseio.com/convites.json', {
+      const response = await fetch('https://nalista-c58f2-default-rtdb.firebaseio.com/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
