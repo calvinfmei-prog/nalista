@@ -105,10 +105,10 @@ function importar(e){
   reader.onload = function(ev){
     const textoCripto = ev.target.result.trim();
 
-    // FRASE SECRETA (deve ser idêntica à do conversor)
+    // Frase deve ser a mesma do conversor
     const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkYWRlIDI1MTI";
 
-    // Gera a chave e o IV exatamente como no conversor
+    // Chave e IV exatamente iguais ao conversor
     const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
     const iv = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
 
@@ -122,12 +122,18 @@ function importar(e){
       const jsonPuro = bytes.toString(CryptoJS.enc.Utf8);
       if(!jsonPuro || !jsonPuro.startsWith('[')) throw "inválido";
 
+      // Salva diretamente
       lista = JSON.parse(jsonPuro);
-      salvar();
-      atualiza();
-      if(document.getElementById("total")) document.getElementById("total").textContent = lista.length;
-      if(document.getElementById("contador")) document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
-      if(typeof atualizarLista === "function") atualizarLista();
+
+      // Atualiza apenas os elementos existentes no porteiro.html
+      if(document.getElementById("total")) 
+        document.getElementById("total").textContent = lista.length;
+
+      if(document.getElementById("contador")) 
+        document.getElementById("contador").textContent = lista.filter(p=>p.usado).length;
+
+      if(typeof atualizarLista === "function") 
+        atualizarLista();
 
     }catch(err){
       console.error("Falha ao decodificar lista:", err);
@@ -136,6 +142,7 @@ function importar(e){
   };
   reader.readAsText(file);
 }
+
 
 // CÂMERA
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false})
@@ -219,6 +226,7 @@ function tocarErro(){
 </script>
 </body>
 </html>
+
 
 
 
