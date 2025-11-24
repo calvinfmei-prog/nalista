@@ -91,7 +91,7 @@ function gerarJSON(){
   // CRIPTOGRAFIA BLINDADA (sem senha visível)
   const jsonPuro = JSON.stringify(lista);
   const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
-  const iv = CryptoJS.SHA256("CalilVIP" + FRASE_SECRETA).toString().substr(0,16);
+  const iv = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
 
   const criptografado = CryptoJS.AES.encrypt(jsonPuro, chave, {
     iv: CryptoJS.enc.Utf8.parse(iv),
