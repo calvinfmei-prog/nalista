@@ -33,7 +33,7 @@
   <h1>EXCLUSIVE PASS</h1>
 
   <button onclick="abrirDisparoMassa()" style="background:#25d366;color:#fff;padding:16px;font-size:20px;border:none;border-radius:15px;margin-top:15px;cursor:pointer;font-weight:bold;width:100%">
-  ABRIR DISPARO AUTOMÁTICO WHATSAPP (QR Code)
+  ABRIR DISPARO AUTOMÁTICO WHATSAPP
   </button>
   <button class="gerar" onclick="gerarEPublicarConvites()">
   GERAR + PUBLICAR CONVITES ONLINE (RECOMENDADO 2025)
@@ -185,10 +185,19 @@ async function enviarTodosWhatsApp() {
 }
 /*-----------------------------------------------------------------*/
 function abrirDisparoMassa() {
-  const win = window.open('disparo.html', '_blank');
+  // Gera os links se não tiver (ou usa clipboard)
+  let linksTexto = "";
+  if (convitesPublicados && convitesPublicados.length > 0) {
+    linksTexto = convitesPublicados.map(c => `${c.pessoa.nome.split(" ")[0]} → ${c.link} (senha: ${c.senha})`).join("\n");
+  }
+
+  const win = window.open('disparo.html', '_blank', 'width=600,height=800');
   setTimeout(() => {
-    win.postMessage({ lista: lista }, '*');
-  }, 2000);
+    win.postMessage({ 
+      lista: lista, 
+      links: linksTexto || "" 
+    }, '*');
+  }, 1000);
 }
 /* ------------------------- CRIA CONVITE --------------------------*/
 async function criarConvite(p) {
