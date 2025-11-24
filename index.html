@@ -204,7 +204,7 @@ async function gerarZip() {
     const blob = await new Promise(res => canvas.toBlob(res));
     pasta.file(`${p.nome.split(" ")[0]}_${p.categoria}.png`, blob);
   }
-
+  const blob = await zip.generateAsync({type:"blob"});
   zip.generateAsync({ type: "base64" }).then(base64 => {
   const url = "data:application/zip;base64," + base64;
   window.open(url, "_blank");
@@ -270,5 +270,6 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
 
 
