@@ -5,94 +5,120 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Disparo WhatsApp - EXCLUSIVE PASS</title>
   <style>
-    body{font-family:Segoe UI;background:#0f0c29;color:#fff;text-align:center;padding:20px}
+    body{font-family:'Segoe UI',sans-serif;background:#0f0c29;color:#eee;margin:0;padding:20px;text-align:center;min-height:100vh}
     .box{max-width:600px;margin:30px auto;background:#16213e;padding:30px;border-radius:20px;box-shadow:0 0 40px #000}
-    #qrcode{margin:20px auto;width:280px;height:280px;background:white;padding:15px;border-radius:20px}
-    button{padding:16px 40px;font-size:20px;background:#25d366;color:#000;border:none;border-radius:15px;margin:20px;cursor:pointer;font-weight:bold}
-    .status{color:#00d4aa;font-size:18px;margin:20px}
+    h1{color:#25d366;font-size:32px;margin:0 0 20px}
+    .info{background:#1a1a5e;padding:20px;border-radius:15px;margin:20px 0;font-size:18px;line-height:1.5}
+    button{padding:16px 40px;font-size:20px;background:#25d366;color:#000;border:none;border-radius:15px;margin:20px;cursor:pointer;font-weight:bold;transition:background 0.3s}
+    button:hover{background:#128c7e}
+    button:disabled{background:#666;cursor:not-allowed}
+    #progress{display:none;background:#1a1a5e;padding:15px;border-radius:10px;margin:20px 0}
+    #progress p{margin:5px 0;color:#ffd700}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <div class="box">
-    <h1 style="color:#25d366">DISPARO WHATSAPP</h1>
-    <p>1. Escaneie o QR Code com seu WhatsApp</p>
-    <div id="qrcode"></div>
-    <p class="status" id="status">Aguardando conexão...</p>
-    <button onclick="iniciarDisparo()" id="btn" disabled>Iniciar Disparo Automático</button>
+    <h1>EXCLUSIVE PASS</h1>
+    <h2 style="color:#fff;margin:10px 0">Disparo Automático WhatsApp</h2>
+    <div class="info">
+      <p><strong>Como funciona:</strong></p>
+      <p>1. Cole os links + senhas na área de texto abaixo (ou gere os convites primeiro pra copiar automático).</p>
+      <p>2. Clique em "INICIAR DISPARO" → abre uma conversa por vez com mensagem pronta.</p>
+      <p>3. É só dar ENTER pra enviar! (Delay de 3s entre cada pra evitar bloqueio)</p>
+    </div>
+    <textarea id="links" rows="8" style="width:100%;background:#1a1a5e;color:#fff;border:none;border-radius:10px;padding:15px;font-size:16px;box-sizing:border-box" placeholder="Cole aqui os links gerados (ex: Calil → https://... (senha: ...))"></textarea>
+    <br>
+    <button onclick="iniciarDisparo()" id="btn">INICIAR DISPARO</button>
+    <div id="progress"></div>
   </div>
 
   <script>
-    // Cria QR Code único (atualiza a cada 15 segundos)
-    let qrCode;
-    function gerarQR() {
-      const id = Date.now();
-      const url = `https://web.whatsapp.com/?autoconnect=${id}`;
-      if (qrCode) qrCode.clear();
-      qrCode = new QRCode(document.getElementById("qrcode"), {
-        text: url,
-        width: 256,
-        height: 256,
-        colorDark: "#000",
-        colorLight: "#fff"
-      });
-      document.getElementById("status").innerHTML = "Escaneie com seu WhatsApp<br><small>Novo QR em 15s</small>";
-      setTimeout(gerarQR, 15000);
-    }
-    gerarQR();
+    let listaGlobal = []; // Recebe a lista do index.html
 
-    // Simula detecção de conexão (na prática você vê no celular)
-    setTimeout(() => {
-      document.getElementById("status").innerHTML = "Conectado! Pronto para disparar";
-      document.getElementById("btn").disabled = false;
-      document.getElementById("btn").textContent = "INICIAR DISPARO";
-    }, 5000); // simula conexão rápida
+    // Recebe dados da janela pai
+    window.addEventListener("message", e => {
+      if (e.data.lista) listaGlobal = e.data.lista;
+      if (e.data.links) {
+        document.getElementById("links").value = e.data.links;
+      }
+    });
+
+    // Função pra colar automático da clipboard (se disponível)
+    async function colarAutomatico() {
+      try {
+        const texto = await navigator.clipboard.readText();
+        if (texto.includes("https://calvinfmei-prog.github.io")) {
+          document.getElementById("links").value = texto;
+        }
+      } catch {}
+    }
+    colarAutomatico(); // Cola na carga da página
 
     async function iniciarDisparo() {
-      if (!confirm("Vou enviar para TODOS os contatos com telefone. Continuar?")) return;
+      const texto = document.getElementById("links").value.trim();
+      if (!texto) return alert("Cole os links + senhas primeiro!");
+
+      const linhas = texto.split('\n').filter(l => l.includes('http'));
+      if (linhas.length === 0) return alert("Nenhum link válido encontrado!");
+
+      if (!confirm(`Vou abrir ${linhas.length} conversas no WhatsApp.\n\nCada uma com mensagem pronta — só dar ENTER!\n\nContinuar?`)) return;
 
       const btn = document.getElementById("btn");
+      const progress = document.getElementById("progress");
       btn.disabled = true;
-      btn.textContent = "Disparando...";
+      btn.textContent = "DISPARANDO...";
+      progress.style.display = "block";
 
-      // Lê os links que você copiou antes
-      let texto;
-      try { texto = await navigator.clipboard.readText(); }
-      catch { return alert("Cole os links gerados antes!"); }
-
-      const linhas = texto.trim().split('\n').filter(l => l.includes('http'));
       let enviados = 0;
-
-      for (let linha of linhas) {
+      for (let i = 0; i < linhas.length; i++) {
+        const linha = linhas[i];
         const nome = linha.split(" → ")[0].trim();
         const linkCompleto = linha.split(" → ")[1].split(" (")[0];
 
+        // Busca telefone na lista global
         const pessoa = listaGlobal.find(p => p.nome.toLowerCase().includes(nome.toLowerCase()));
-        if (!pessoa?.telefone) continue;
+        let url = "";
 
-        const tel = pessoa.telefone.replace(/\D/g, '');
-        const msg = encodeURIComponent(
-          `Olá *${nome.split(" ")[0]}*! Te espero na FESTA EXCLUSIVA!\n\nSeu convite VIP:\n${linkCompleto}`
-        );
+        if (pessoa && pessoa.telefone) {
+          const tel = pessoa.telefone.replace(/\D/g, '');
+          const msg = encodeURIComponent(
+            `Olá *${nome.split(" ")[0]}*! 🎉\n\nVocê está convidado para a *FESTA EXCLUSIVA*!\n\nSeu convite individual:\n${linkCompleto}\n\nAcesse o link e use a senha pra baixar seu PNG com QR Code.\n\nTe vejo lá! 🔥`
+          );
+          url = `https://wa.me/55${tel}?text=${msg}`;
+        } else {
+          // Fallback: abre WhatsApp Web com texto pronto (pra você colar manual)
+          const msg = encodeURIComponent(
+            `Olá *${nome.split(" ")[0]}*! Seu convite:\n${linkCompleto}`
+          );
+          url = `https://web.whatsapp.com/send?text=${msg}`;
+        }
 
-        window.open(`https://wa.me/55${tel}?text=${msg}`, '_blank');
+        // Abre a conversa
+        window.open(url, '_blank');
+
+        // Atualiza progresso
         enviados++;
+        progress.innerHTML = `
+          <p><strong>Progresso:</strong> ${enviados}/${linhas.length}</p>
+          <p>Enviando para: <strong>${nome}</strong></p>
+          <p><small>Aba aberta! Dê ENTER pra enviar e espere 3s pro próximo...</small></p>
+        `;
 
-        document.getElementById("status").innerHTML = 
-          `Enviando... ${enviados}/${linhas.length}<br>${nome}`;
-
-        await new Promise(r => setTimeout(r, 5000)); // 5 segundos entre cada (100% seguro)
+        // Delay de 3 segundos (seguro pro WhatsApp)
+        if (i < linhas.length - 1) {
+          await new Promise(r => setTimeout(r, 3000));
+        }
       }
 
+      // Finaliza
+      btn.disabled = false;
       btn.textContent = "DISPARO CONCLUÍDO!";
-      document.getElementById("status").innerHTML = 
-        `SUCESSO! ${enviados} mensagens enviadas`;
+      progress.innerHTML += "<p style='color:#25d366'><strong>SUCESSO! Todas as abas abertas.</strong></p>";
+      setTimeout(() => {
+        progress.style.display = "none";
+        btn.textContent = "INICIAR NOVO DISPARO";
+      }, 5000);
     }
-
-    // Recebe a lista do index.html (importante!)
-    window.addEventListener("message", e => {
-      if (e.data.lista) window.listaGlobal = e.data.lista;
-    });
   </script>
 </body>
 </html>
