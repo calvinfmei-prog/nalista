@@ -268,9 +268,32 @@ function limparTudo(){
 }
 
 function exportar(){
-  const blob = new Blob([JSON.stringify(lista)], {type:"application/json"});
-  download(blob, "lista_convidados.json");
+    if(!lista.length) return alert("Lista vazia!");
+
+    // FRASE SECRETA (igual no porteiro!)
+    const FRASE_SECRETA = "QSBmZXN0YSBkbyBDYWxpbCBkaWEgMTIvMTIgw6kgc8OzIHByYSBxdWVtIMOpIFZJUCBkZSB2ZXJkZGUgMjUxMg";
+
+    // mesma chave e IV
+    const chave = CryptoJS.SHA256(FRASE_SECRETA + "ExclusivePass2025").toString();
+    const iv    = CryptoJS.SHA256("PASSEVIP" + FRASE_SECRETA).toString().substr(0,16);
+
+    // texto puro
+    const textoPuro = JSON.stringify(lista);
+
+    // criptografa
+    const cript = CryptoJS.AES.encrypt(textoPuro, chave, {
+        iv: CryptoJS.enc.Utf8.parse(iv),
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    }).toString();
+
+    // download
+    const blob = new Blob([cript], {type:"application/json"});
+    download(blob, "lista_convidados_criptografada.json");
+
+    alert("Arquivo exportado com criptografia AES!");
 }
+
 
 function importar(e){
   const file = e.target.files[0];
@@ -307,4 +330,5 @@ function importar(e){
 </script>
 </body>
 </html>
+
 
