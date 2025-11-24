@@ -31,7 +31,7 @@
       const senha = document.getElementById('senha').value.toUpperCase();
       if (!id || !senha) return alert("Link inválido");
 
-      const res = await fetch(`https://nalista-c58f2-default-rtdb.firebaseio.com/`);
+      const res = await fetch(`https://nalista-c58f2-default-rtdb.firebaseio.com/convites/${id}.json`);
       const data = await res.json();
 
       if (data && data.senha === senha) {
