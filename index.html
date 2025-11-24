@@ -174,7 +174,8 @@ async function gerarIndividuais() {
 
   for (let p of lista) {
     const canvas = await criarConvite(p);
-    canvas.toBlob(b => download(b, `${p.nome.split(" ")[0]}_${p.categoria}.png`));
+    const dataURL = canvas.toDataURL("image/png");
+    window.open(dataURL, "_blank");
   }
 
   alert("PNG gerados!");
@@ -194,7 +195,10 @@ async function gerarZip() {
   }
 
   const zipBlob = await zip.generateAsync({type:"blob"});
-  download(zipBlob, `EXCLUSIVE_PASS_${lista.length}.zip`);
+  zip.generateAsync({ type: "base64" }).then(base64 => {
+  const url = "data:application/zip;base64," + base64;
+  window.open(url, "_blank");
+});
 }
 
 /* ------------------------- IMPORTAR --------------------------*/
@@ -256,6 +260,7 @@ function limparTudo(){
 </script>
 </body>
 </html>
+
 
 
 
