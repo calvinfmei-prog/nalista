@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Seu Convite Exclusivo</title>
+  <style>
+    body{font-family:Segoe UI;background:#0f0c29;color:#fff;text-align:center;padding:50px}
+    .box{max-width:600px;margin:auto;background:#16213e;padding:40px;border-radius:20px;box-shadow:0 0 40px #000}
+    img{max-width:100%;border-radius:20px;margin:20px 0}
+    input, button{padding:15px;font-size:18px;margin:10px;width:80%;border-radius:10px}
+    button{background:#25d366;color:#000;border:none;cursor:pointer;font-weight:bold}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>EXCLUSIVE PASS</h1>
+    <p>Digite sua senha para baixar seu convite:</p>
+    <input type="text" id="senha" placeholder="EX: A7K9">
+    <button onclick="verificar()">VER MEU CONVITE</button>
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    const senhaUrl = urlParams.get('s');
+
+    if (senhaUrl) document.getElementById('senha').value = senhaUrl;
+
+    async function verificar() {
+      const senha = document.getElementById('senha').value.toUpperCase();
+      if (!id || !senha) return alert("Link inválido");
+
+      const res = await fetch(`https://convites-calvin-default-rtdb.firebaseio.com/convites/${id}.json`);
+      const data = await res.json();
+
+      if (data && data.senha === senha) {
+        const img = `data:image/png;base64,${data.imagem}`;
+        document.getElementById('resultado').innerHTML = `
+          <h2>Olá, ${data.nome.split(" ")[0]}!</h2>
+          <p>Categoria: <strong>${data.categoria}</strong></p>
+          <img src="${img}">
+          <br><br>
+          <button onclick="download('${img}', '${data.nome.split(" ")[0]}_${data.categoria}.png')">
+            BAIXAR CONVITE
+          </button>
+        `;
+      } else {
+        alert("Senha incorreta ou convite inválido");
+      }
+    }
+
+    function download(dataUrl, nome) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = nome;
+      a.click();
+    }
+
+    // Auto-verifica se veio com senha no link
+    if (senhaUrl && id) verificar();
+  </script>
+</body>
+</html>
